@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file    hw_usart.h
+ * @file    hw_usart.c
  * @author  MCD Application Team
  * @version V1.1.2
  * @date    08-September-2017
@@ -44,53 +44,113 @@
  *
  ******************************************************************************
  */
-/* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __usart_H
-#define __usart_H
 
-// We define a larger UART RX buffer size to remove reception error (lost data).
-#undef SERIAL_RX_BUFFER_SIZE
-#define SERIAL_RX_BUFFER_SIZE 256
-#include "Arduino.h"
+/* Includes ------------------------------------------------------------------*/
+#include "hw_usart.h"
+
+static HardwareSerial *Serialx = NULL;
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
-/* Private defines -----------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
+/* USART init function */
 
-// Default baudrate for I-NUCLEO_LRWAN1 shield
-#define BAUD_RATE 115200
+HAL_StatusTypeDef HW_UART_Modem_Init(void *serial, uint32_t BaudRate)
+{
+  if(serial != NULL) {
+    Serialx = (HardwareSerial*)serial;
+    Serialx->begin(BaudRate);
+    return (HAL_OK);
+  }
+  return (HAL_ERROR);
+}
 
-/* External variables --------------------------------------------------------*/
-/* Exported macros -----------------------------------------------------------*/
-/* Exported functions ------------------------------------------------------- */
+/* USART deinit function */
 
-HAL_StatusTypeDef HW_UART_Modem_Init(void *serial, uint32_t BaudRate);
-void HW_UART_Modem_DeInit(void);
+void HW_UART_Modem_DeInit(void)
+{
+  if(Serialx != NULL) {
+    Serialx->end();
+    Serialx = NULL;
+  }
+}
 
-FlagStatus HW_UART_Modem_IsNewCharReceived(void);
 
-uint8_t HW_UART_Modem_GetNewChar(void);
+/******************************************************************************
+  * @brief To check if data has been received
+  * @param none
+  * @retval Reset no data / set data
+******************************************************************************/
+FlagStatus HW_UART_Modem_IsNewCharReceived(void)
+{
+  FlagStatus status;
 
-uint8_t HW_UART_Modem_Write(uint8_t *buffer, uint16_t len);
+  if(Serialx != NULL) {
+    if(Serialx->available()) {
+      status = SET;
+    } else {
+      status = RESET;
+    }
+  } else {
+    status = RESET;
+  }
+  return status;
+}
 
-void HW_UART_Modem_Flush(void);
+/******************************************************************************
+  * @brief Get the received character
+  * @param none
+  * @retval Return the data received
+******************************************************************************/
+uint8_t HW_UART_Modem_GetNewChar(void)
+{
+  if(Serialx != NULL) {
+    return Serialx->read();
+  } else {
+    return 0;
+  }
+}
 
+/******************************************************************************
+  * @brief Send an among of character
+  * @param buffer: data to send
+  * @param len: number of data to send
+  * @retval Return the data number of data sent
+******************************************************************************/
+uint8_t HW_UART_Modem_Write(uint8_t *buffer, uint16_t len)
+{
+  if(Serialx != NULL) {
+    return Serialx->write(buffer, len);
+  } else {
+    return 0;
+  }
+}
+
+/******************************************************************************
+  * @brief  Flush serial buffer
+  * @param  none
+  * @retval none
+******************************************************************************/
+void HW_UART_Modem_Flush(void)
+{
+  if(Serialx != NULL) {
+    while(Serialx->available()) {
+      Serialx->read();
+    }
+  }
+}
+
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
 
 #ifdef __cplusplus
-}
+ }
 #endif
-#endif /*__ usart_H */
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
