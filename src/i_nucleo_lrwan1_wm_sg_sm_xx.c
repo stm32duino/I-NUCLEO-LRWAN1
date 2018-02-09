@@ -36,57 +36,17 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "stm32l0xx_hal.h"
-#include "hw_conf.h"
-#include "hw_usart.h"
 #include "i_nucleo_lrwan1_wm_sg_sm_xx.h"
-#include "tiny_sscanf.h"
+#include "hw.h"
 
 #include <stdarg.h>
-#include "tiny_vsnprintf.h"
-#include "debug.h"
-
-
-
-
-
-/*!
- * Radio driver structure initialization
- */
-const struct Modem_s Modem =
-{
-  Modem_IO_Init,
-  Modem_IO_DeInit,
-  Modem_AT_Cmd
-  // Lora_Init,             /*there is sense if the lora driver is part of BSP architecture*/
-  // Lora_Join,
-  // Lora_SetJoinMode,
-  // Lora_GetJoinMode,
-  // LoRa_SetKey,
-  // LoRa_GetKey,
-  // LoRa_SetAppID,
-  // LoRa_GetAppID,
-  // LoRa_SetDeviceID,
-  // LoRa_GetDeviceID,
-  // LoRa_SetDeviceAddress,
-  // LoRa_GetDeviceAddress,
-  // LoRa_SetNetworkID,
-  // LoRa_GetNetworkID,
-  // Lora_SetAdaptiveDataRate,
-  // Lora_GetAdaptiveDataRate,
-  // Lora_SetClass,
-  // Lora_GetClass,
-  // Lora_SetDutyCycle,
-  // Lora_GetDutyCycle,
-  // Lora_SetDataRate,
-  // Lora_GetDataRate,
-  // LoRa_SetFrameCounter,
-};
-
-
 
 /* External variables --------------------------------------------------------*/
 extern ATCmd_t gFlagException;  /*defined in lora_driver.c*/
@@ -103,8 +63,6 @@ extern ATCmd_t gFlagException;  /*defined in lora_driver.c*/
 char LoRa_AT_Cmd_Buff[DATA_TX_MAX_BUFF_SIZE];    /* Buffer used for AT cmd transmission */
 
 static uint16_t Offset = 0;   /*write position needed for send command*/
-
-static uint8_t aRxBuffer[5];  /* Buffer used for Rx input character */
 
 static char response[DATA_RX_MAX_BUFF_SIZE];  /*has to be the largest of the response*/
                                               /*not only for return code but also for*/
@@ -153,9 +111,9 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *ptr);
  * @retval AT_OK in case of success
  * @retval AT_UART_LINK_ERROR in case of failure
 *****************************************************************************/
-ATEerror_t Modem_IO_Init( void )
+ATEerror_t Modem_IO_Init( void *serial )
 {
-  if ( HW_UART_Modem_Init(BAUD_RATE)== HAL_OK )
+  if ( HW_UART_Modem_Init(serial, BAUD_RATE)== HAL_OK )
   {
     return AT_OK;
   }
@@ -173,23 +131,9 @@ ATEerror_t Modem_IO_Init( void )
 *****************************************************************************/
 void Modem_IO_DeInit( void )
 {
-  HAL_UART_MspDeInit(&huart2);
+  HW_UART_Modem_DeInit();
 }
 
-
-/******************************************************************************
- * @brief  Receive data in interrupt mode from modem UART interface.
- * @param  UART handle
- * @retval None
-*****************************************************************************/
-void Modem_UART_Receive_IT(UART_HandleTypeDef *huart)
-{
-  /*UART peripheral in reception process for response returned by slave*/
-  if(HAL_UART_Receive_IT(huart, (uint8_t *)aRxBuffer,1) != HAL_OK)
-  {
-   while (1);
-  }
-}
 
 /******************************************************************************
  * @brief  Handle the AT cmd following their Groupp type
@@ -221,7 +165,7 @@ uint16_t Len;
     if(Cmd != AT_RESET)
     {
         Status = at_cmd_receive(NULL);
-        Status = AT_OK;
+        // Status = AT_OK;
     }
     break;
   }
@@ -245,7 +189,7 @@ uint16_t Len;
   }
   case AT_ASYNC_EVENT:
   {
-      if ( Cmd == AT_JOIN)
+      if (( Cmd == AT_JOIN) || (Cmd == AT) || (Cmd == AT_TXT))
       Status = at_cmd_receive_async_event();
       else
       Status = at_cmd_receive_async_event_downlink_data(pdata);
@@ -256,10 +200,12 @@ uint16_t Len;
       HAL_Delay(1000);
       Len = at_cmd_format(Cmd, pdata, SET_MARKER);
       HAL_Status = at_cmd_send(Len);
-       if(HAL_Status != HAL_OK)
+       if(HAL_Status != HAL_OK) {
         return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-       else
+      } else {
         HAL_Delay(1000);
+        HW_UART_Modem_Flush(); //Clean unread response
+      }
       return (AT_OK);
   }
   case AT_EXCEPT_1:
@@ -346,6 +292,27 @@ uint8_t value_8;   /*for 8_D*/
     else
     {
       len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
+    }
+    break;
+  }
+  case AT_TXT:
+  {
+    /*Format = FORMAT_BINARY_TEXT; */
+    if(Marker == SET_MARKER)
+    {
+      Offset = AT_VPRINTF("%s%s%s%d%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,((sSendData_t *)ptr)->NbRep,AT_COMMA);
+      unsigned i;
+      for (i = 0; i < ((sSendData_t *)ptr)->DataSize; i++)
+      {
+        Offset+=AT_VPRINTF("%02x", ((sSendData_t *)ptr)->Buffer[i]);
+      }
+      Offset+=AT_VPRINTF("%s",AT_TAIL);
+      len = Offset;
+      Offset = 0;
+    }
+    else
+    {
+      len = 0;
     }
     break;
   }
@@ -450,6 +417,7 @@ uint8_t value_8;   /*for 8_D*/
   case  AT_NJS:         /* N/A*/
   case  AT_CLASS:       /* not supported on V2.5 USI FW version*/
   case  AT_WDCT:        /* supported*/
+  case  AT_DEFMODE:
   {
     /*Format = FORMAT_8_D_PARAM;*/
     if(Marker == SET_MARKER)
@@ -477,12 +445,28 @@ uint8_t value_8;   /*for 8_D*/
     }
     break;
   }
+  case AT_RF:
+  {
+    if(Marker == SET_MARKER) {
+      len = AT_VPRINTF("%s%s%s%d,%d,%d,%d,%d,%d,%d,%d,%s",AT_HEADER,
+      CmdTab[Cmd],AT_SET_MARKER,((sRadioCtrlSet_t *)ptr)->power,
+      ((sRadioCtrlSet_t *)ptr)->frequency,((sRadioCtrlSet_t *)ptr)->sf,
+      ((sRadioCtrlSet_t *)ptr)->bw,((sRadioCtrlSet_t *)ptr)->codingRate,
+      ((sRadioCtrlSet_t *)ptr)->crc,((sRadioCtrlSet_t *)ptr)->preamble,
+      ((sRadioCtrlSet_t *)ptr)->invIQ,AT_TAIL);
+    }
+    else
+    {
+      len = 0;
+    }
+    break;
+  }
   default:
     len = AT_VPRINTF("%s%s%s",AT_HEADER,CmdTab[Cmd],AT_TAIL);
     DBG_PRINTF ("format not yet supported \n\r");
     break;
 } /*end switch(cmd)*/
-   return len;
+return len;
 }
 
 
@@ -494,9 +478,17 @@ uint8_t value_8;   /*for 8_D*/
 static HAL_StatusTypeDef at_cmd_send(uint16_t len)
 {
 HAL_StatusTypeDef RetCode;
+  uint16_t size;
+
+  DBG_PRINTF("cmd: %s\r\n", LoRa_AT_Cmd_Buff);
 
   /*transmit the command from master to slave*/
-  RetCode = HAL_UART_Transmit(&huart2, (uint8_t*)LoRa_AT_Cmd_Buff, len, 5000);
+  size = HW_UART_Modem_Write((uint8_t*)LoRa_AT_Cmd_Buff, len);
+  if(size == len ) {
+    RetCode = HAL_OK;
+  } else {
+    RetCode = HAL_ERROR;
+  }
   return ( RetCode);
 }
 
@@ -515,37 +507,41 @@ int8_t charnumber = 0;
 char *ptrChr;
 ATEerror_t RetCode;
 uint8_t NoReturnCode =1;   /*to discriminate the Get return code from return value*/
+uint32_t msStart;
 
   /*cleanup the response buffer*/
-  memset(response, 0x00, 16);
-
-  /*UART peripheral in reception process for response returned by slave*/
-  if(HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) != HAL_OK)
-  {
-   while (1);
-  }
-
+  memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
   while (!ResponseComplete)
   {
+    msStart = millis();
+    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+      if((millis() - msStart) > RESPONSE_TIMEOUT) {
+        return AT_UART_LINK_ERROR;
+      }
+    }
 
-      while (HW_UART_Modem_IsNewCharReceived() == RESET);
+    /*process the response*/
+    response[i] = HW_UART_Modem_GetNewChar();
 
-      /*process the response*/
-      response[i] = HW_UART_Modem_GetNewChar();
+    //Delete the first three characters '\r''#''space' to remove response analysing issue
+    if((response[0] == '\r') && (response[1] == '#') && (response[2] == ' ')) {
+      i = -1;
+    }
 
       /*wait up to carriage return OR the line feed marker*/
        if (/*(response[i] =='\r') || */(response[i] == '\n'))
        {
+        DBG_PRINTF("at_cmd_receive: %s\r\n", response);
         if(pdata == NULL) /*return code following a SET cmd or simple AT cmd*/
         {
-          if (i>1)  /*return code following a SET cmd or simple AT cmd- we skip the first <cr><ln>*/
-          {
+          //if (i>1)  /*return code following a SET cmd or simple AT cmd- we skip the first <cr><ln>*/
+          //{
             i= 0;
             ResponseComplete = 1;
-            RetCode = at_cmd_responseAnalysing(&response[2]);  /* to skip the '\0' in position [0]*/
+            RetCode = at_cmd_responseAnalysing(response);
             break;
-          }
+          //}
         }
         else    /* returned value following a GET cmd */
         {
@@ -590,11 +586,8 @@ uint8_t NoReturnCode =1;   /*to discriminate the Get return code from return val
          }
        }
         i++;
-      HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) ;
       charnumber++;
   }
-      huart2.gState = HAL_UART_STATE_READY;
-      huart2.RxState = HAL_UART_STATE_READY;        /*to be checked since was validated with previous */
       return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
 }
 
@@ -614,20 +607,19 @@ int8_t charnumber = 0;
 char *ptrChr;
 ATEerror_t RetCode;
 uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return value*/
+uint32_t msStart;
 
   /*cleanup the response buffer*/
-  memset(response, 0x00, 16);
-
-  /*UART peripheral in reception process for response returned by slave*/
-  if(HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) != HAL_OK)
-  {
-   while (1);
-  }
+  memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
   while (!ResponseComplete)
   {
-
-    while (HW_UART_Modem_IsNewCharReceived() == RESET);
+    msStart = millis();
+    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+      if((millis() - msStart) > RESPONSE_TIMEOUT) {
+        return AT_UART_LINK_ERROR;
+      }
+    }
 
     /*process the response*/
     response[i] = HW_UART_Modem_GetNewChar();
@@ -635,11 +627,13 @@ uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return val
     /*wait up to carriage return OR the line feed marker*/
     if (/*(response[i] =='\r') || */(response[i] == '\n'))
     {
+      DBG_PRINTF("at_cmd_receive_async_event: %s\r\n", response);
+
       if (i!= 0 && NoReturnCode)      /*trap the asynchronous event*/
       {
         /*first statement to get back the return value*/
         response[i] = '\0';
-        ptrChr = strchr(&response[1],'+');       /*to skip the '\0''\r'*/
+        ptrChr = strchr(&response[0],'+');       /*to skip the '\0''\r'*/
         RetCode = at_cmd_AsyncEventAnalysing(ptrChr,NULL);
         memset(response, 0x00, 16);
         i= -1;             /*to compensate the next index iteration and restart in [0]*/
@@ -668,11 +662,8 @@ uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return val
       }
     }
       i++;
-      HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) ;
       charnumber++;
   }
-      huart2.gState = HAL_UART_STATE_READY;
-      huart2.RxState = HAL_UART_STATE_READY;        /*to be checked since was validated with previous */
       return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
 }
 
@@ -692,21 +683,19 @@ char *ptrChr;
 ATEerror_t RetCode;
 uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return value*/
 int8_t DlinkData_Complete = (0x1U);
+uint32_t msStart;
 
   /*cleanup the response buffer*/
-  memset(response, 0x00, 16);
-
-  /*UART peripheral in reception process for response returned by slave*/
-  if(HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) != HAL_OK)
-  {
-   while (1);
-  }
-
+  memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
   while ( !(DlinkData_Complete & (0x1u <<2)))   /*received sequence not complete*/
   {
-
-    while (HW_UART_Modem_IsNewCharReceived() == RESET);
+    msStart = millis();
+    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+      if((millis() - msStart) > ASYNC_EVENT_TIMEOUT) {
+        return AT_UART_LINK_ERROR;
+      }
+    }
 
     /*process the response*/
     response[i] = HW_UART_Modem_GetNewChar();
@@ -714,6 +703,8 @@ int8_t DlinkData_Complete = (0x1U);
       /*wait up to carriage return OR the line feed marker*/
        if ((response[i] =='\r') || (response[i] == '\n'))
        {
+          DBG_PRINTF("at_cmd_receive_async_event_downlink_data: %s\r\n", response);
+
           if (i!= 0 && NoReturnCode)      /*trap the asynchronous events associated to network downlink data*/
           {
             /*sequence of events to be trapped: +RXPORT , +PAYLOADSIZE , +RCV*/
@@ -745,11 +736,8 @@ int8_t DlinkData_Complete = (0x1U);
           }
        }
        i++;
-       HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer,1) ;
        charnumber++;
   }
-       huart2.gState = HAL_UART_STATE_READY;
-       huart2.RxState = HAL_UART_STATE_READY;        /*to be checked since was validated with previous */
        return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
 }
 
@@ -824,6 +812,21 @@ ATEerror_t status;
       return (status);
     }
 
+    /*following statement for network downlink data*/
+    if (strncmp(ReturnResp, "+PS", sizeof("+PS")-1) == 0)
+    {
+      /* event has been identified*/
+      status = AT_OK;
+      return (status);
+    }
+
+    /*following statement for network downlink data*/
+    if (strncmp(ReturnResp, "+TX: Done", sizeof("+TX: Done")-1) == 0)
+    {
+      /* event has been identified*/
+      status = AT_OK;
+      return (status);
+    }
     return (status);
 }
 /******************************************************************************
@@ -863,4 +866,7 @@ uint16_t len;
   return len;
 }
 
+#ifdef __cplusplus
+ }
+#endif
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

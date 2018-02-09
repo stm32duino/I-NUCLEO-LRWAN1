@@ -41,6 +41,9 @@
  extern "C" {
 #endif
 
+#include "tiny_sscanf.h"
+#include "tiny_vsnprintf.h"
+
 /* Includes ------------------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -52,12 +55,17 @@
 
 /* Exported types ------------------------------------------------------------*/
 
-#define DATA_RX_MAX_BUFF_SIZE    64       /*Max size of the received buffer*/
+#define DATA_RX_MAX_BUFF_SIZE    128       /*Max size of the received buffer*/
                                           /*to optimize we can match with device key sizeof*/
 
 #define DATA_TX_MAX_BUFF_SIZE    78       /*Max size of the transmit buffer*/
                                           /*it is the worst-case when sending*/
                                           /*a max payload equal to 64 bytes*/
+
+#define RESPONSE_TIMEOUT   1500     /* AT command response timeout in ms */
+
+// Delay before reception: rx1 delay + rx2 delay + SF12 transmision time = 1s + 2s + 1.5s = 4.5s
+#define ASYNC_EVENT_TIMEOUT   5000
 
 typedef enum ATGroup
 {
@@ -162,6 +170,25 @@ typedef struct sPowerCtrlSet{
   uint8_t  AutoSleepTime;
 } sPowerCtrlSet_t;
 
+/*type definition for the radio setting*/
+typedef struct sRadioCtrlSet{
+  uint8_t power;
+  uint32_t frequency;
+  uint8_t sf;
+  uint8_t bw;
+  uint8_t codingRate;
+  bool crc;
+  uint16_t preamble;
+  bool invIQ;
+} sRadioCtrlSet_t;
+
+/*type definition for the TXT command*/
+typedef struct sSendData{
+  uint16_t NbRep;
+  uint8_t *Buffer;
+  uint8_t DataSize;
+} sSendData_t;
+
 /*type definition for AT cmd format identification*/
 typedef enum Fmt
 {
@@ -198,7 +225,7 @@ uint16_t at_cmd_vprintf(const char *format, ...);
  * @retval AT_OK in case of success
  * @retval AT_UART_LINK_ERROR in case of failure
 *****************************************************************************/
-ATEerror_t Modem_IO_Init( void ) ;
+ATEerror_t Modem_IO_Init( void *serial ) ;
 
 /******************************************************************************
  * @brief  Deinitialise modem UART interface.
