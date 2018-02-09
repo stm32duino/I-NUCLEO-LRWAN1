@@ -142,6 +142,8 @@ typedef enum ATCmd
 
  AT_PS,               /*new one*/
 
+ AT_RF,               /*new one*/
+
  AT_END_AT
 } ATCmd_t;
 
@@ -152,85 +154,87 @@ typedef enum ATCmd
 #ifdef AT_CMD_STRING
 /*list of AT string cmd supported by the USI LoRa modem*/
 static char *CmdTab[] = {
-  {""},
-  {"I"},           /* firmware version of USI loara module*/
-  {"Z"},
-  {"+BAND"},       /* +BAND country band - default 868 band*/
+  "",
+  "I",           /* firmware version of USI loara module*/
+  "Z",
+  "+BAND",       /* +BAND country band - default 868 band*/
 
-  {"+JOIN"},       /* +JOIN*/
+  "+JOIN",       /* +JOIN*/
 
-  {"+NJS"},        /* +NJS --> ????*/
+  "+NJS",        /* +NJS --> ????*/
 
-  {"+EUI"},       /* +EUI device ID*/
+  "+EUI",       /* +EUI device ID*/
 
-  {"+ADDR"},      /* +ADDR device Address*/
+  "+ADDR",      /* +ADDR device Address*/
 
-  {"+AK"},         /* +AK application key*/
+  "+AK",         /* +AK application key*/
 
-  {"+NSK"},        /* +NSK Network session Key*/
+  "+NSK",        /* +NSK Network session Key*/
 
-  {"+ASK"},        /* +ASK application Session key*/
+  "+ASK",        /* +ASK application Session key*/
 
-  {"+APPEUI"},     /* +APPEUI application Identifier*/
+  "+APPEUI",     /* +APPEUI application Identifier*/
 
-  {"+ADR"},        /* +ADR adaptive data rate*/
+  "+ADR",        /* +ADR adaptive data rate*/
 
-  {"+TXP"},        /* +TXP transmit Tx power*/
+  "+TXP",        /* +TXP transmit Tx power*/
 
-  {"+DR"},         /* +DR data rate*/
+  "+DR",         /* +DR data rate*/
 
-  {"+DC" },       /* +DC duty cycle settings*/
+  "+DC",       /* +DC duty cycle settings*/
 
-  {"+NTYP"},        /* +NTYP (replace+PNM) public network*/
+  "+NTYP",        /* +NTYP (replace+PNM) public network*/
 
-  {"+RX2FQ"},      /* +RF2FQ Rx2 window frequency -->   ??????*/
+  "+RX2FQ",      /* +RF2FQ Rx2 window frequency -->   ??????*/
 
-  {"+RX2DR"},      /* +RX2DR data rate of Rx window*/
+  "+RX2DR",      /* +RX2DR data rate of Rx window*/
 
-  {"+RX1DT"},      /* +RX1DT Delay of the Rx1 window*/
+  "+RX1DT",      /* +RX1DT Delay of the Rx1 window*/
 
-  {"+RX2DT"},      /* +RX2DT delay of the Rx2 window*/
+  "+RX2DT",      /* +RX2DT delay of the Rx2 window*/
 
-  {"+JRX1DT"},      /* +JRX1DT Join delay on Rx Wind 1*/
+  "+JRX1DT",      /* +JRX1DT Join delay on Rx Wind 1*/
 
-  {"+JRX2DT"},      /* +JRX2DT Join delay on Rx Wind 2*/
+  "+JRX2DT",      /* +JRX2DT Join delay on Rx Wind 2*/
 
-  {"+NJM"},        /* +NJM Nwk Join Mode*/
-  {"+NWKID"},      /* +NWKID Network ID */
-  {"+FCU"},        /* +FCU uplink frame counter */
-  {"+FCD"},        /* +FCD downlink frame counter */
+  "+NJM",        /* +NJM Nwk Join Mode*/
+  "+NWKID",      /* +NWKID Network ID */
+  "+FCU",        /* +FCU uplink frame counter */
+  "+FCD",        /* +FCD downlink frame counter */
 
-  {"+CLASS"},      /* +CLASS LoRa class*/
+  "+CLASS",      /* +CLASS LoRa class*/
 
 /*  {"+SENDB"}, */     /* +SENDB send data binary format*/   /* sendB replaced by Send*/
-  {"+SEND"},       /* +SEND send data in raw format*/    /* no sendb anymore with USI*/
+  "+SEND",       /* +SEND send data in raw format*/    /* no sendb anymore with USI*/
 
-  {"+TXT"} ,       /* +TXT  transmit text packet*/
+  "+TXT",       /* +TXT  transmit text packet*/
 
-  {"+RECVB"},      /* +RECVB received data in binary format*/
-  {"+RECV"},       /* +RECV received data in raw format*/
-  {"+CFM"},        /* +CFM  confirmation mode*/
-  {"+CFS"},        /* +CFS  confirm status*/
+  "+RECVB",      /* +RECVB received data in binary format*/
+  "+RECV",       /* +RECV received data in raw format*/
+  "+CFM",        /* +CFM  confirmation mode*/
+  "+CFS",        /* +CFS  confirm status*/
 
-  {"+BAT"},        /* +BAT  battery level*/
+  "+BAT",        /* +BAT  battery level*/
 
-  {"+RSSI"},       /* +RSSI Signal strength indicator on received radio signal*/
+  "+RSSI",       /* +RSSI Signal strength indicator on received radio signal*/
 
-  {"+SNR"},        /* +SNR  Signal to Noice ratio*/
+  "+SNR",        /* +SNR  Signal to Noice ratio*/
 
-  {"+VER"},         /* LoRaWAN version */
+  "+VER",         /* LoRaWAN version */
 
-  {"+WDCT"},        /* for update the configuration table*/
+  "+WDCT",        /* for update the configuration table*/
 
-  {"+DEFMODE"},     /* fro set the default operationmode - 6 = LoRA WAN mode*/
+  "+DEFMODE",     /* fro set the default operationmode - 6 = LoRA WAN mode*/
 
-  {"+WDG"},         /* for enabling/disabling the watchdog*/
+  "+WDG",         /* for enabling/disabling the watchdog*/
 
-  {"E"},            /* for enabling/deisabling echo mode*/
+  "E",            /* for enabling/disabling echo mode*/
 
-  {"+SLEEP"},       /* for enter immediatly in sleep mode (slave) following the power control setting*/
+  "+SLEEP",       /* for enter immediatly in sleep mode (slave) following the power control setting*/
 
-  {"+PS"}           /* for reead or set the MCU power control (Slave)*/
+  "+PS",          /* for reead or set the MCU power control (Slave)*/
+
+  "+RF"           /* to change the radio-related settings */ 
 };
 
 #endif
@@ -275,30 +279,30 @@ typedef enum eATEerror
 #ifdef AT_ERROR_STRING
 /*RetCode used to compare the return code from modem*/
 static ATE_RetCode_t ATE_RetCode[] = {
-  {{"OK\r\n"},{sizeof("OK\r\n")},{AT_OK}},
-  {{"ERROR_UNKNOW\r"},{sizeof("ERROR_UNKNOW\r")},{AT_ERROR_UNKNOW}},
-  {{"\rERROR_UNKNOW_COMMAND\r"},{sizeof("\rERROR_UNKNOW_COMMAND\r")},{AT_ERROR_UNKNOW_COMMAND}},
-  {{"ERROR_LESS_ARGUMENETS\r\n"},{sizeof("ERROR_LESS_ARGUMENETS\r\n")},{AT_ERROR_LESS_ARGUMENTS}},
-  {{"ERROR_MORE_ARGUMENETS\r"},{sizeof("ERROR_MORE_ARGUMENETS\r")},{AT_ERROR_MORE_ARGUMENETS}},
-  {{"ERROR_INVALID_ARGUMENTS\r"},{sizeof("ERROR_INVALID_ARGUMENTS\r")},{AT_ERROR_INVALID_ARGUMENTS}},
-  {{"AT_ERROR_NOT_SUPPORTED\r"},{sizeof("AT_ERROR_NOT_SUPPORTED\r")},{AT_ERROR_NOT_SUPPORTED}},
-  {{"ERROR_OUT_OF_RANGE\r"},{sizeof("ERROR_OUT_OF_RANGE\r")},{AT_ERROR_OUT_OF_RANGE}},
-  {{"ERROR_RX_TIMEOUT\r"},{sizeof("ERROR_RX_TIMEOUT\r")},{AT_ERROR_RX_TIMEOUT}},
-  {{"ERROR_RX_ERROR\r"},{sizeof("ERROR_RX_ERROR\r")},{AT_ERROR_RX_ERROR}},
-  {{"ERROR_TX_TIMEOUT\r"},{sizeof("ERROR_TX_TIMEOUT\r")},{AT_ERROR_TX_TIMEOUT}},
-  {{"ERROR_TX_ERROR\r"},{sizeof("ERROR_TX_ERROR\r")},{AT_ERROR_TX_ERROR}},
-  {{"ERROR_RF_BUSY\r"},{sizeof("ERROR_RF_BUSY\r")},{AT_ERROR_RF_BUSY}},
-  {{"ERROR_TIMEOUT\r"},{sizeof("ERROR_TIMEOUT\r")},{AT_ERROR_TIMEOUT}},
-  {{"ERROR_NO_ARGUMENETS_NEEDED\r"},{sizeof("ERROR_NO_ARGUMENETS_NEEDED\r")},{AT_ERROR_NO_ARGUMENETS_NEEDED}},
-  {{"AT_ERROR_HAL_ERROR\r"},{sizeof("AT_ERROR_HAL_ERROR\r")},{AT_ERROR_HAL_ERROR}},
-  {{"ERROR_INVALID_HEX_FORMAT\r"},{sizeof("ERROR_INVALID_HEX_FORMAT\r")},{AT_ERROR_INVALID_HEX_FORMAT}},
-  {{"ERROR_OUT_OF_ADDRESS\r"},{sizeof("ERROR_OUT_OF_ADDRESS\r")},{AT_ERROR_OUT_OF_ADDRESS}},
-  {{"ERROR_WAN_SEND\r"},{sizeof("ERROR_WAN_SEND\r")},{AT_ERROR_WAN_SEND}},
-  {{"ERROR_WAN_GETPARAM\r"},{sizeof("ERROR_WAN_GETPARAM\r")},{AT_ERROR_WAN_GETPARAM}},
-  {{"ERROR_WAN_SETPARAM\r"},{sizeof("ERROR_WAN_SETPARAM\r")},{AT_ERROR_WAN_SETPARAM}},
-  {{"ERROR_WAN_NON_JOINED\r"},{sizeof("ERROR_WAN_NON_JOINED\r")},{AT_WAN_NON_JOINED}},
-  {{"unknown error\r"},{sizeof("unknown error\r")},{AT_END_ERROR}}};
-
+  {"OK\r\n",                      sizeof("OK\r\n"),                       AT_OK},
+  {"ERROR_UNKNOW\r",              sizeof("ERROR_UNKNOW\r"),               AT_ERROR_UNKNOW},
+  {"\rERROR_UNKNOW_COMMAND\r",    sizeof("\rERROR_UNKNOW_COMMAND\r"),     AT_ERROR_UNKNOW_COMMAND},
+  {"ERROR_LESS_ARGUMENETS\r\n",   sizeof("ERROR_LESS_ARGUMENETS\r\n"),    AT_ERROR_LESS_ARGUMENTS},
+  {"ERROR_MORE_ARGUMENETS\r",     sizeof("ERROR_MORE_ARGUMENETS\r"),      AT_ERROR_MORE_ARGUMENETS},
+  {"ERROR_INVALID_ARGUMENTS\r",   sizeof("ERROR_INVALID_ARGUMENTS\r"),    AT_ERROR_INVALID_ARGUMENTS},
+  {"AT_ERROR_NOT_SUPPORTED\r",    sizeof("AT_ERROR_NOT_SUPPORTED\r"),     AT_ERROR_NOT_SUPPORTED},
+  {"ERROR_OUT_OF_RANGE\r",        sizeof("ERROR_OUT_OF_RANGE\r"),         AT_ERROR_OUT_OF_RANGE},
+  {"ERROR_RX_TIMEOUT\r",          sizeof("ERROR_RX_TIMEOUT\r"),           AT_ERROR_RX_TIMEOUT},
+  {"ERROR_RX_ERROR\r",            sizeof("ERROR_RX_ERROR\r"),             AT_ERROR_RX_ERROR},
+  {"ERROR_TX_TIMEOUT\r",          sizeof("ERROR_TX_TIMEOUT\r"),           AT_ERROR_TX_TIMEOUT},
+  {"ERROR_TX_ERROR\r",            sizeof("ERROR_TX_ERROR\r"),             AT_ERROR_TX_ERROR},
+  {"ERROR_RF_BUSY\r",             sizeof("ERROR_RF_BUSY\r"),              AT_ERROR_RF_BUSY},
+  {"ERROR_TIMEOUT\r",             sizeof("ERROR_TIMEOUT\r"),              AT_ERROR_TIMEOUT},
+  {"ERROR_NO_ARGUMENETS_NEEDED\r",sizeof("ERROR_NO_ARGUMENETS_NEEDED\r"), AT_ERROR_NO_ARGUMENETS_NEEDED},
+  {"AT_ERROR_HAL_ERROR\r",        sizeof("AT_ERROR_HAL_ERROR\r"),         AT_ERROR_HAL_ERROR},
+  {"ERROR_INVALID_HEX_FORMAT\r",  sizeof("ERROR_INVALID_HEX_FORMAT\r"),   AT_ERROR_INVALID_HEX_FORMAT},
+  {"ERROR_OUT_OF_ADDRESS\r",      sizeof("ERROR_OUT_OF_ADDRESS\r"),       AT_ERROR_OUT_OF_ADDRESS},
+  {"ERROR_WAN_SEND\r",            sizeof("ERROR_WAN_SEND\r"),             AT_ERROR_WAN_SEND},
+  {"ERROR_WAN_GETPARAM\r",        sizeof("ERROR_WAN_GETPARAM\r"),         AT_ERROR_WAN_GETPARAM},
+  {"ERROR_WAN_SETPARAM\r",        sizeof("ERROR_WAN_SETPARAM\r"),         AT_ERROR_WAN_SETPARAM},
+  {"ERROR_WAN_NON_JOINED\r",      sizeof("ERROR_WAN_NON_JOINED\r"),       AT_WAN_NON_JOINED},
+  {"unknown error\r",             sizeof("unknown error\r"),              AT_END_ERROR}
+};
 #endif
 
 
