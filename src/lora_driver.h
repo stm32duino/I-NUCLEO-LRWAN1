@@ -53,9 +53,8 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "hw_conf.h"
-//#include "atcmd.h"
-#include ATCMD_MODEM        /* preprocessing definition in hw_conf.h*/
+#include "i_nucleo_lrwan1_wm_sg_sm_xx.h"
+#include "hw.h"
 
 /* Exported types ------------------------------------------------------------*/
 typedef enum RetCode
@@ -65,106 +64,22 @@ typedef enum RetCode
   MODULE_UART_ERROR,
 } RetCode_t;
 
-
-/* LoRa modem State Machine states */
-typedef enum eDevicState
-{
-    DEVICE_INIT,
-    DEVICE_READY,
-    DEVICE_JOINED,
-    DEVICE_SEND,
-    DEVICE_SLEEP,
-    DEVICE_JOIN_ON_GOING
-} DeviceState_t;
-
-
-/* LoRa Driver modem param*/
-typedef struct sLoRaDriverParam
-{
-  uint16_t  SensorCycleMeasure;     /*Sensor Cycle Measuremnt in ms*/
-  uint8_t JoinMode;                /*LoRa Join Mode (OTAA or ABP)*/
-} LoRaDriverParam_t;
-
-
-/* Lora driver modem callbacks*/
-typedef struct sLoRaDriverCallback
-{
-  void ( *SensorMeasureData )( sSendDataBinary_t *PtrStruct  );   /*Get measure sensor data (pressure, humidity, Temperature and current battery level)*/
-  void ( *Callback1 ) ( uint8_t *id);  /*free callback entry point if needed*/
-} LoRaDriverCallback_t;
-
-
 /* Exported constants --------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
 /* Exported macros -----------------------------------------------------------*/
-#define DELAY_FOR_JOIN_STATUS_REQ    15000  /* wait time to request Join status*/
 
-
-/* LoRaMac TxPower definition */
-#define TX_POWER_20_DBM                             0
-#define TX_POWER_14_DBM                             1
-#define TX_POWER_11_DBM                             2
-#define TX_POWER_08_DBM                             3
-#define TX_POWER_05_DBM                             4
-#define TX_POWER_02_DBM                             5
-
-/* LoRaMac datarates definition */
-#define DR_0                                        0  // SF12 - BW125
-#define DR_1                                        1  // SF11 - BW125
-#define DR_2                                        2  // SF10 - BW125
-#define DR_3                                        3  // SF9  - BW125
-#define DR_4                                        4  // SF8  - BW125
-#define DR_5                                        5  // SF7  - BW125
-#define DR_6                                        6  // SF7  - BW250
-#define DR_7                                        7  // FSK
-
-/* LoRa confirmation mode on send message */
-#define  LORA_CONFIRM_MODE                          1
-#define  LORA_UNCONFIRM_MODE                        0
+/* wait time to request Join status*/
+#define DELAY_FOR_JOIN_STATUS_REQ    15000
 
 /* LoRa network join mode */
 #define  OTAA_JOIN_MODE                             1
 #define  ABP_JOIN_MODE                              0
 
-/* LoRa Adaptative Data Rate */
-#define  ADAPT_DATA_RATE_ENABLE                      1
-#define  ADAPT_DATA_RATE_DISABLE                     0
-
-/* LoRa Class */
-#define  LORA_CLASS_A                                0
-#define  LORA_CLASS_B                                1
-#define  LORA_CLASS_C                                2
-
-/* LoRa duty cycle (only for test) */
-#define  DUTY_CYCLE_ENABLE                           1
-#define  DUTY_CYCLE_DISABLE                          0
-
-/* LoRa public network mode */
-#define  PUBLIC_NETWORK_ON                           1
-#define  PUBLIC_NETWORK_OFF                          0
+// Payload size limitation
+#define MAX_PAYLOAD_LENGTH  64U
 
 
 /* Exported functions ------------------------------------------------------- */
-
-/************ LoRa Driver modem Finate State Machine  ************/
-
-
-/******************************************************************************
-  * @Brief lora Modem state machine
-  * @param void
-  * @retval None
-******************************************************************************/
-void Lora_fsm( void);
-
-
-/******************************************************************************
-  * @Brief Context InitialModem following the lora device modem used
-  * @param Periode to do sensors measurement
-  * @retval None
-******************************************************************************/
-void Lora_Ctx_Init(LoRaDriverCallback_t  *PtrLoRaDriverCallbacks,
-                              LoRaDriverParam_t *PtrLoRaDriverParam);
-
 
 /************ connection management ************/
 
@@ -603,7 +518,6 @@ ATEerror_t Lora_GetVersion(uint8_t *PtrVersion);
 ATEerror_t Lora_GetFWVersion(uint8_t *PtrFWVersion);
 
 
-#if USE_I_NUCLEO_LRWAN1
 /**************************************************************
  * @brief  Do a request to enter the slave in sleep (MCU STOP mode)
  * @param  Void
@@ -613,12 +527,19 @@ ATEerror_t Lora_SleepMode(void);
 
 
 /**************************************************************
+ * @brief  Wait for mcu is going to sleep or is waked up
+ * @param  void
+ * @retval LoRA return code
+**************************************************************/
+ATEerror_t Lora_SleepStatus(void);
+
+
+/**************************************************************
  * @brief  Do a request to set the power control settings of the MCU (slave)
  * @param  Power control IN value
  * @retval LoRa return code
 **************************************************************/
 ATEerror_t Lora_SetMCUPowerCtrl(sPowerCtrlSet_t *PtrStructData);
-#endif
 
 /**************************************************************
  * @brief  Do a Dumy request to resynchronize the Host and the modem
@@ -646,13 +567,21 @@ ATEerror_t Lora_RestoreConfigTable(void);
 **************************************************************/
 ATEerror_t Lora_UpdateConfigTable(void);
 
+/**************************************************************
+ * @brief  Convert keys from char to uint8_t
+ * @param  Key to convert.
+ * @param  Key converted.
+ * @param  length of the integer key.
+ **************************************************************/
+void keyCharToInt(const char *cKey, uint8_t *iKey, uint8_t length);
 
-/******************************************************************************
-  * @Brief get the current device finate state
-  * @param void
-  * @retval deviceState
-******************************************************************************/
-DeviceState_t lora_getDeviceState( void );
+/**************************************************************
+ * @brief  Convert keys from uint8_t to char
+ * @param  Key converted.
+ * @param  Key to convert.
+ * @param  length of the integer key.
+ **************************************************************/
+void keyIntToChar(char *cKey, const uint8_t *iKey, uint8_t length);
 
 #ifdef __cplusplus
 }

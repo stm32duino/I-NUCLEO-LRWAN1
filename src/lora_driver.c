@@ -44,16 +44,17 @@
  ******************************************************************************
  */
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include "hw.h"
-#include "bsp.h"
-#include "Lora_driver.h"
+#include "lora_driver.h"
 #include "tiny_sscanf.h"
-#include "low_power.h"
-#include "timeServer.h"
 
 /* External variables --------------------------------------------------------*/
 ATCmd_t gFlagException = AT_END_AT;
@@ -68,48 +69,13 @@ ATCmd_t gFlagException = AT_END_AT;
 
 
 /* Private variable ----------------------------------------------------------*/
-#if USE_MDM32L07X01
-static TimerEvent_t JoinStatusDelayTimer; /*timer to handle the join status delay*/
-#endif
-static __IO uint8_t JoinTimeOutFlag = 0;  /*to indicate if timeout raised on Join procedure*/
-
-
-/* Object definition for data to be sent to loRa application server*/
-static char DataBinaryBuff[64];
-#ifdef USE_MDM32L07X01
-static sSendDataBinary_t SendDataBinary={ DataBinaryBuff, 0 , 0};
-#elif USE_I_NUCLEO_LRWAN1
-static sSendDataBinary_t SendDataBinary={ DataBinaryBuff, 0 , 0 ,0};
-
-#endif
-
-static LoRaDriverCallback_t *LoraDriverCallbacks;
-static LoRaDriverParam_t *LoraDriverParam;
-
 static uint8_t PtrValueFromDevice[32]  ;  /*to get back the device address in */
                                           /*11:22:33:44 format before*/
                                           /*to be translated into uint32_t type*/
 
-static uint8_t PtrTempValueFromDevice[16]  ;  /*to get back the device address in */
-                                          /*11:22:33;44:55:66:77 format before*/
-                                          /*to be translated into and array of */
-                                          /*8 uint8_t*/
+static uint8_t PtrTempValueFromDeviceKey[64]  ;  /* in relation with the response size*/
 
-static uint8_t PtrTempValueFromDeviceKey[47]  ;  /* in relation with the response size*/
-
-#ifdef USE_I_NUCLEO_LRWAN1
-static uint8_t PtrDataFromNetwork[64]  ;      /* Payload size max returned by USI modem*/
-#endif
-
-static TimerEvent_t NextSensorMeasureTimer; /*timer to handle next sensor measure*/
-
-static DeviceState_t DeviceState = DEVICE_INIT ;
-
-static DeviceState_t DeviceSubState = DEVICE_INIT ; /* to manage the join transition*/
-
-static TimerEvent_t DemoLedTimer;                  /*timer to handle Demo Led*/
-
-__IO uint8_t SensorTimerWakeup = 0;
+static uint8_t PtrDataFromNetwork[128]  ;      /* Payload size max returned by USI modem*/
 
 /* Private define ------------------------------------------------------------*/
 
@@ -119,28 +85,10 @@ __IO uint8_t SensorTimerWakeup = 0;
   /*  From USI FW V3.0, modem sleep mode is supported for ABP and OTAA Join mode*/
   /******************************************************************************/
 
-/*put in comment MODEM_IN_SLEEP_MODE defined in "hw_conf.h" */
-/*if we do not want to have the USI MCU modem in sleep mode*/
-
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-#define USI_FW_V26               26
-#define USI_FW_V30               30
-#define STRING_USI_FW_V26       "2.6"
-#define STRING_USI_FW_V30       "3.0"
-static sPowerCtrlSet_t   PowerCtrlSettings= {0,1,0};
-uint8_t FWVersion;
-#endif
-
 
 /* Private functions ---------------------------------------------------------*/
+static void memcpy1( uint8_t *dst, const uint8_t *src, uint16_t size );
 
-#if USE_MDM32L07X01
-static void Lora_OnJoinStatusDelayTimerEvt( void );
-#endif
-
-static void Lora_OnNextSensorMeasureTimerEvt( void );
-
-static void Lora_OnLedTimerEvent( void );       /*timer function to handle Demo Led*/
 /**************************************************************
  * @brief  Check if the LoRa module is working
  * @param  void
@@ -200,8 +148,6 @@ ATEerror_t Status = AT_END_ERROR;
             /*       Lora_JoinAccept() does the waiting on return event       */
             /******************************************************************/
 
-#ifdef USE_I_NUCLEO_LRWAN1
-
   switch(Mode)
   {
     case ABP_JOIN_MODE:
@@ -221,21 +167,6 @@ ATEerror_t Status = AT_END_ERROR;
     default:
       break;
   }
-#elif USE_MDM32L07X01
-  /*request a join connection and whatever the mode DO waiting DELAY_FOR_JOIN_STATUS_REQ seconds*/
-  Status = Modem_AT_Cmd(AT_CTRL, AT_JOIN, NULL );
-  if (Status == AT_BUSY_ERROR){
-    return Status;
-  }
-  else
-  {
-    TimerInit( &JoinStatusDelayTimer, Lora_OnJoinStatusDelayTimerEvt);
-    /*Set and start the Join status requesttimeout */
-    TimerSetValue( &JoinStatusDelayTimer, DELAY_FOR_JOIN_STATUS_REQ);
-    TimerStart( &JoinStatusDelayTimer );
-    Status = AT_JOIN_SLEEP_TRANSITION;
-  }
-#endif
 
   return(Status);
 }
@@ -252,31 +183,9 @@ ATEerror_t Lora_JoinAccept(void)
 {
 ATEerror_t Status = AT_END_ERROR;
 
-#ifdef USE_I_NUCLEO_LRWAN1
   /*trap the asynchronous accept event (OTAA mode) coming from USI modem*/
   Status = Modem_AT_Cmd(AT_ASYNC_EVENT, AT_JOIN, NULL );
-#elif USE_MDM32L07X01
-uint8_t JoinStatus = 0;
-  /*trap the return code of the join request procedure*/
-  if(JoinTimeOutFlag)
-  {
-    TimerStop( &JoinStatusDelayTimer );
-    JoinTimeOutFlag = RESET;
-    /*request the join network status*/
-    Status = Modem_AT_Cmd(AT_GET, AT_NJS, &JoinStatus );
-    if(Status == AT_OK)
-    {
-    if (JoinStatus)       /*LoRa Nwk joined*/
-      return Status;
-    }
-    else
-    {                   /*LoRa nwk not joined*/
-    return  AT_NO_NET_JOINED;
-    }
-  }
-#endif
   return (Status);
-
 }
 
 
@@ -377,10 +286,10 @@ ATEerror_t LoRa_GetAppID(uint8_t *AppEui)
 {
 ATEerror_t Status;
 
-  Status = Modem_AT_Cmd(AT_GET, AT_APPEUI, PtrTempValueFromDevice );
+  Status = Modem_AT_Cmd(AT_GET, AT_APPEUI, PtrTempValueFromDeviceKey );
   if (Status == 0)
   {
-    AT_VSSCANF((char*)PtrTempValueFromDevice, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+    AT_VSSCANF((char*)PtrTempValueFromDeviceKey, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
     &AppEui[0], &AppEui[1], &AppEui[2], &AppEui[3],
     &AppEui[4], &AppEui[5], &AppEui[6], &AppEui[7]);
     return (Status);
@@ -412,10 +321,10 @@ ATEerror_t LoRa_GetDeviceID(uint8_t *PtrDeviceID)
 {
 ATEerror_t Status;
 
-  Status = Modem_AT_Cmd(AT_GET, AT_DEUI, PtrTempValueFromDevice );
+  Status = Modem_AT_Cmd(AT_GET, AT_DEUI, PtrTempValueFromDeviceKey );
   if (Status == 0)
   {
-    AT_VSSCANF((char*)PtrTempValueFromDevice, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+    AT_VSSCANF((char*)PtrTempValueFromDeviceKey, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
     &PtrDeviceID[0], &PtrDeviceID[1], &PtrDeviceID[2], &PtrDeviceID[3],
     &PtrDeviceID[4], &PtrDeviceID[5], &PtrDeviceID[6], &PtrDeviceID[7]);
     return (Status);
@@ -891,7 +800,6 @@ uint8_t sizebuf;
     return (Status);
 }
 
-#if USE_I_NUCLEO_LRWAN1
 /**************************************************************
  * @brief  Trap an asynchronous event coming from external modem (only USI device)
  * @param  Pointer to RCV out value if any
@@ -910,6 +818,10 @@ char *ptrChr;
     ptrChr = strchr((strchr((char*)&PtrDataFromNetwork[0],',')+1),',');  /*search the second ',' occurence in the return string*/
     if ((sizebuf=strlen((char*)ptrChr+1)) > DATA_RX_MAX_BUFF_SIZE)     /*shrink the Rx buffer to MAX size*/
     sizebuf = DATA_RX_MAX_BUFF_SIZE -1;
+    // Prevent a memory overflow in case of corrupted read
+    if(sizebuf == 0) {
+      return AT_TEST_PARAM_OVERFLOW;
+    }
     memcpy1(PtrStructData->Buffer, (uint8_t *)ptrChr+1, sizebuf-1);
     *(PtrStructData->Buffer+sizebuf-1) ='\0';
     return (Status);
@@ -917,7 +829,6 @@ char *ptrChr;
   else
     return (Status);
 }
-#endif
 
 /**************************************************************
  * @brief  Send binary data to a giving port number
@@ -928,11 +839,9 @@ ATEerror_t Lora_SendDataBin(sSendDataBinary_t *PtrStructData)
 {
 ATEerror_t Status;
 
-#ifdef USE_MDM32L07X01
-  Status = Modem_AT_Cmd(AT_SET, AT_SENDB, PtrStructData );
-#elif USE_I_NUCLEO_LRWAN1
+  // Remove all old data in the uart rx buffer to prevent response issue
+  HW_UART_Modem_Flush();
   Status = Modem_AT_Cmd(AT_SET, AT_SEND, PtrStructData );
-#endif
   return(Status);
 }
 
@@ -1097,28 +1006,16 @@ ATEerror_t Status;
   Status = Modem_AT_Cmd(AT_GET, AT_VER, PtrValueFromDevice );
   if (Status == 0)
   {
-#if USE_MDM32L07X01
-uint8_t sizebuf;
-    if ((sizebuf=strlen((char*)PtrValueFromDevice)) > DATA_RX_MAX_BUFF_SIZE)     /*shrink the Rx buffer to MAX size*/
-    sizebuf = DATA_RX_MAX_BUFF_SIZE -1;
-
-    memcpy1(PtrVersion, (uint8_t *)&PtrValueFromDevice[0], sizebuf);
-    return (Status);
-#endif
-
-#if USE_I_NUCLEO_LRWAN1
 char *ptrChr;
     ptrChr = strchr((char *)&PtrValueFromDevice[0],'v');       /*to skip the "LoRaWAN v"*/
     strcpy((char*)PtrVersion,ptrChr+1);
     return (Status);
-#endif
   }
   else
     return (Status);
 }
 
 
-#if USE_I_NUCLEO_LRWAN1
 /**************************************************************
  * @brief  Do a request to get the firmware version of the modem (slave)
  * @param  pointer to FWVERSION out value
@@ -1177,11 +1074,8 @@ ATEerror_t Status;
 }
 
 
-#endif
-
       /************ Power Control Commands (for USI board) ***************/
 
-#if USE_I_NUCLEO_LRWAN1
 /**************************************************************
  * @brief  Do a request to enter the slave in sleep (MCU STOP mode)
  * @param  Void
@@ -1193,6 +1087,20 @@ ATEerror_t Status;
 
   Status = Modem_AT_Cmd(AT_EXCEPT_1, AT_SLEEP, PtrValueFromDevice );     /* under building*/
   return(Status);
+}
+
+/**************************************************************
+ * @brief  Wait for mcu is going to sleep or is waked up
+ * @param  void
+ * @retval LoRA return code
+**************************************************************/
+ATEerror_t Lora_SleepStatus(void)
+{
+  ATEerror_t Status = AT_END_ERROR;
+
+  /*trap the asynchronous accept event coming from USI modem*/
+  Status = Modem_AT_Cmd(AT_ASYNC_EVENT, AT, NULL );
+  return (Status);
 }
 
 
@@ -1264,317 +1172,66 @@ ATEerror_t Status;
   return(Status);
 }
 
-#endif
 
-
-
-
-      /*********** Finate State Machine for LoRa Modem mangement *************/
-
-/******************************************************************************
-  * @Brief lora Modem state machine
-  * @param void
-  * @retval None
-******************************************************************************/
-void Lora_fsm( void)
+/**************************************************************
+ * @brief  memory copy n bytes from src to dst
+ * @param  destination pointer
+ * @param  source pointer
+ * @param  number of bytes to copy
+ * @retval none
+**************************************************************/
+void memcpy1( uint8_t *dst, const uint8_t *src, uint16_t size )
 {
-RetCode_t LoraModuleRetCode;
-ATEerror_t LoraCmdRetCode;
-
-
-  switch( DeviceState )
-  {
-    case DEVICE_INIT:
+    while( size-- )
     {
-       /* Check if the LoRa Modem is ready to work*/
-
-       LoraModuleRetCode = Lora_Init();
-
-       if (LoraModuleRetCode == MODULE_READY)
-       {
-          DeviceState = DEVICE_READY;
-          DBG_PRINTF("Lora module ready\n");
-
-#if USE_MDM32L07X01
-          /*Set the modem Join mode following application set-up*/
-          LoraCmdRetCode = Lora_SetJoinMode(LoraDriverParam->JoinMode);
-#endif
-
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-          /*Set the low power control - Modem MCU will enter stop mode if get command at+sleep */
-          if(((JOIN_MODE == ABP_JOIN_MODE) && (FWVersion == USI_FW_V26)) || (FWVersion == USI_FW_V30))
-          LoraCmdRetCode = Lora_SetMCUPowerCtrl(&PowerCtrlSettings);
-#endif
-
-          /*to adapt the data rate during transmission*/
-          LoraCmdRetCode = Lora_SetAdaptiveDataRate(ADAPT_DATA_RATE_ENABLE);
-
-          /* Timer for sensor occurence measure*/
-          TimerInit( &NextSensorMeasureTimer, Lora_OnNextSensorMeasureTimerEvt );
-       }
-       else
-       {
-          DBG_PRINTF("Lora module not ready\n");   /*we stay in Init state and redo Lora_Init*/
-       }
-       break;
+        *dst++ = *src++;
     }
-    case DEVICE_READY:
-    {
-      /* Do a join request to the LoRaWAN network - can be ABP or OTAA  Join mode*/
-      /* Nota : Join Mode parameter relevant for USI modem - For Murata not releavant cf.User manual*/
+}
 
-
-#ifdef USE_I_NUCLEO_LRWAN1             /* Led on Modem slave device to indicate a Join request*/
-      BSP_LED_Modem_On(LED_GREEN);
-#elif USE_MDM32L07X01                  /* Led on Nucleo Master device to indicate a Join request*/
-      BSP_LED_On(LED2);
-#endif
-
-      TimerInit( &DemoLedTimer,  Lora_OnLedTimerEvent);
-      TimerSetValue( &DemoLedTimer,  200);
-      TimerStart( &DemoLedTimer);
-
-      LoraCmdRetCode = Lora_Join(LoraDriverParam->JoinMode);
-      switch(LoraCmdRetCode)
-      {
-        case AT_OK:
-        {
-          DeviceState = DEVICE_JOINED;
-          DBG_PRINTF("Nwk Joined\n");
-          break;
-        }
-        case AT_JOIN_SLEEP_TRANSITION:    /*waiting the return fron modem*/
-        {
-          DeviceState = DEVICE_SLEEP;
-          DeviceSubState = DEVICE_JOIN_ON_GOING;
-          break;
-        }
-        default:
-          DBG_PRINTF("Nwk Not Joined\n");   /* we stay in ready state and redo LoRa_Join*/
-          break;
-      }
-      break;
-    }
-    case DEVICE_JOINED:
-    {
-       DBG_PRINTF("Nwk Joined - waiting\n");
-      /*Schedule the first mesaure */
-      TimerSetValue( &NextSensorMeasureTimer, LoraDriverParam->SensorCycleMeasure /*SENSORS_MEASURE_CYCLE*/);      /* every #n ms*/
-      TimerStart( &NextSensorMeasureTimer );
-
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-      /*put the modem MCU in stop mode*/
-      if(((JOIN_MODE == ABP_JOIN_MODE) && (FWVersion == USI_FW_V26)) || (FWVersion == USI_FW_V30))
-      LoraCmdRetCode = Lora_SleepMode();
-#endif
-      DeviceState = DEVICE_SLEEP;
-      break;
-    }
-    case DEVICE_SLEEP:
-    {
-      /* Wake up through RTC events or asynchronous event coming from modem*/
-      if (DeviceSubState == DEVICE_JOIN_ON_GOING)
-      {
-        LoraCmdRetCode = Lora_JoinAccept();
-        if (LoraCmdRetCode == AT_OK)
-        {
-          DeviceState = DEVICE_JOINED;
-          DeviceSubState = DEVICE_INIT;  /* Reset the substate. We are Joined*/
-          DBG_PRINTF("Nwk Joined\n");
-        }
-        else
-        {
-          DeviceState = DEVICE_READY;
-          DBG_PRINTF("Nwk Not Joined\n");   /* we stay in ready state and redo LoRa_Join*/
-        }
-      }
-      break;
-    }
-    case DEVICE_SEND:
-    {
-
-#if defined (USE_I_NUCLEO_LRWAN1)     /*only applicable for USI LoRA modem*/
-      if(SensorTimerWakeup)  /*the wakeup comes from Timer*/
-      {
-        SensorTimerWakeup = 0;
-#endif
-
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-        /*Dumy Cmd after wakeup to resynchronize host/modem*/
-        if(((JOIN_MODE == ABP_JOIN_MODE) && (FWVersion == USI_FW_V26)) || (FWVersion == USI_FW_V30))
-        LoRa_DumyRequest();
-#endif
-
-        /*Sensor reading on slave device*/
-        LoraDriverCallbacks->SensorMeasureData(&SendDataBinary);
-
-#ifdef USE_I_NUCLEO_LRWAN1              /* Led on Modem slave device to indicate a send request*/
-        BSP_LED_Modem_On(LED_GREEN);
-#elif USE_MDM32L07X01                   /* Led on Nucleo Master device to indicate a send request*/
-        BSP_LED_On(LED2);
-#endif
-
-        TimerInit( &DemoLedTimer,  Lora_OnLedTimerEvent);
-        TimerSetValue( &DemoLedTimer,  200);
-        TimerStart( &DemoLedTimer);
-
-        /*Send data to Slave device  */
-        LoraCmdRetCode = Lora_SendDataBin(&SendDataBinary);
-        if (LoraCmdRetCode == AT_OK)
-          DBG_PRINTF("Data binary send on port = %d --> OK\n",SendDataBinary.Port);
-        else
-          DBG_PRINTF("Data binary Send on port = %d --> KO\n",SendDataBinary.Port);
-
-        /*Schedule the next measure */
-        TimerSetValue( &NextSensorMeasureTimer,  LoraDriverParam->SensorCycleMeasure/*SENSORS_MEASURE_CYCLE*/);
-        TimerStart( &NextSensorMeasureTimer );
-
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-        /*put the modem MCU in stop mode*/
-        if(((JOIN_MODE == ABP_JOIN_MODE) && (FWVersion == USI_FW_V26)) || (FWVersion == USI_FW_V30))
-          LoraCmdRetCode = Lora_SleepMode();
-#endif
-
-#if defined (USE_I_NUCLEO_LRWAN1)     /*only applicable for USI LoRA modem*/
-      } /*end of SensorTimerWakeup*/
-      else  /*the wakeup comes from network Event downlink data*/
-      {
-
-uint8_t ReceivedDownlinkData[64];
-sReceivedDataBinary_t StructDownLinkData ={ ReceivedDownlinkData, 0 , 0};
-
-
-        LoraCmdRetCode = Lora_AsyncDownLinkData(&StructDownLinkData);
-        DBG_PRINTF("downlink data\n");
-        /************************************************************************/
-        /* following the use case,                                              */
-        /*   - switch on LED                                                    */
-        /*   - activator setting                                                */
-        /*   - LoRa mdeom setting                                               */
-        /*   - .................                                                */
-        /* user has to manage the received donwlink data                        */
-        /************************************************************************/
-      }
-#endif
-
-      DeviceState = DEVICE_SLEEP;
-      break;
-    }
-    default:
-    {
-      DeviceState = DEVICE_INIT;
-      break;
+/**************************************************************
+ * @brief  Convert keys from char to uint8_t
+ * @param  Key to convert.
+ * @param  Key converted.
+ * @param  length of the integer key.
+ **************************************************************/
+void keyCharToInt(const char *cKey, uint8_t *iKey, uint8_t length)
+{
+  if((cKey != NULL) && (iKey != NULL)) {
+    char c[3] = {'\0'};
+    uint8_t p = 0;
+    for(uint8_t i = 0; i < length; i++) {
+      c[0] = cKey[p];
+      c[1] = cKey[p+1];
+      iKey[i] = (uint8_t)strtoul(c, NULL, 16);
+      p += 2;
     }
   }
 }
 
-
-
-/******************************************************************************
-  * @Brief Context InitialModem following the lora device modem used
-  * @param Periode to do sensors measurement
-  * @retval None
-******************************************************************************/
-void Lora_Ctx_Init(LoRaDriverCallback_t  *PtrLoRaDriverCallbacks,
-                              LoRaDriverParam_t *PtrLoRaDriverParam)
+/**************************************************************
+ * @brief  Convert keys from uint8_t to char
+ * @param  Key converted.
+ * @param  Key to convert.
+ * @param  length of the integer key.
+ **************************************************************/
+void keyIntToChar(char *cKey, const uint8_t *iKey, uint8_t length)
 {
-
-  /* init the main call backs*/
-  LoraDriverCallbacks = PtrLoRaDriverCallbacks;
-  LoraDriverParam = PtrLoRaDriverParam;
-
-#ifdef USE_I_NUCLEO_LRWAN1
-  BSP_LED_Modem_Init(LED_GREEN);   /*Led indicator on Modem slave device*/
-#elif USE_MDM32L07X01
-  BSP_LED_Init(LED2);              /*Led indicator on Nucleo master board*/
-#endif
-
-
-  /*Do a Modem reset in a hidden way in order to synchronize Host and Modem*/
-  /*Lora_Reset();*/
-
-  /***************************************************************************/
-  /*          disabling the echo mode which is by default active             */
-  /*        from USI FW V2.6, echo mode will be disable by default.          */
-  /*        Then this line could be removed                                  */
-  /***************************************************************************/
-
-#ifdef USE_I_NUCLEO_LRWAN1
-uint8_t   Mode = 0;
-  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &Mode );
-#endif
-
-
-  /***************************************************************************/
-  /*    To discriminate the FW version where Sleep mode works correctly      */
-  /***************************************************************************/
-#if defined (USE_I_NUCLEO_LRWAN1) && defined (MODEM_IN_SLEEP_MODE)
-uint8_t   RetCode;
-uint8_t PtrFWVersion[6];
-
-  Lora_GetFWVersion(PtrFWVersion);
-  RetCode = strncmp((char*)PtrFWVersion, STRING_USI_FW_V26, sizeof(STRING_USI_FW_V26)-1);
-  if (RetCode == 0)
-    FWVersion = USI_FW_V26;    /* FW version where OTAA bug prevents the sleep mode (MCU slave stop mode)*/
-  else
-    FWVersion = USI_FW_V30;    /* FW version where OTAA bug has been fixed*/
-#endif
-
+  if((cKey != NULL) && (iKey != NULL)) {
+    uint8_t p = 0;
+    for(uint8_t i = 0; i < length; i++) {
+      itoa(iKey[i], &cKey[p], 16);
+      // Add missing '0'
+      if(cKey[p+1] == '\0') {
+        cKey[p+1] = cKey[p];
+        cKey[p] = '0';
+      }
+      p += 2;
+    }
+  }
 }
 
-/******************************************************************************
-  * @Brief get the current device finate state
-  * @param void
-  * @retval deviceState
-******************************************************************************/
-DeviceState_t lora_getDeviceState( void )
-{
-  return DeviceState;
-}
-
-
-      /*********** private (static) Lora functions *************/
-
-
-/******************************************************************************
- * @brief Function executed on NextSensorMeeasure Timeout event
- * @param none
- * @return none
-******************************************************************************/
-static void Lora_OnNextSensorMeasureTimerEvt( void )
-{
-  TimerStop( &NextSensorMeasureTimer );
-  SensorTimerWakeup = 1;
-  DeviceState = DEVICE_SEND;
-}
-
-/******************************************************************************
- * @brief Function executed on JoinStatusDelayTimerEvt Timeout event
- * @param none
- * @return none
-******************************************************************************/
-#if USE_MDM32L07X01
-static void Lora_OnJoinStatusDelayTimerEvt( void )
-{
-  TimerStop( &JoinStatusDelayTimer );
-  JoinTimeOutFlag = SET;
-
-}
+#ifdef __cplusplus
+  }
 #endif
-
-
-/******************************************************************************
- * @brief Function executed on LedTimer Timeout event
- * @param none
- * @return none
-******************************************************************************/
-static void Lora_OnLedTimerEvent( void )
-{
-#ifdef USE_I_NUCLEO_LRWAN1
-  BSP_LED_Modem_Off(LED_GREEN);
-#elif  USE_MDM32L07X01
-  BSP_LED_Off(LED2);
-#endif
-}
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
