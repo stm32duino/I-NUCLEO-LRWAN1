@@ -98,6 +98,10 @@
  * (space, tabs,...)
  */
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -1036,5 +1040,8 @@ tiny_sscanf(const char *str, const char *fmt, ...)
   return (ret);
 }
 
+#ifdef __cplusplus
+  }
+#endif
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

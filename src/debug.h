@@ -58,8 +58,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include "hw_conf.h"
-//#include "vcom.h"            /* if vcom is used for trace purpose*/
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -68,8 +66,6 @@
 /* Exported functions ------------------------------------------------------- */
 
 void DBG_Init( void );
-
-void Error_Handler( void );
 
 #ifdef DEBUG
 

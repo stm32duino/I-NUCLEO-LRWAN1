@@ -62,6 +62,8 @@ Maintainer: Miguel Luis and Gregory Cristian
 #ifndef __HW_H__
 #define __HW_H__
 
+#include "hw_usart.h"
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -69,37 +71,9 @@ Maintainer: Miguel Luis and Gregory Cristian
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "hw_conf.h"
-#include "hw_gpio.h"
-//#include "hw_spi.h"
-#include "hw_rtc.h"
-#include "hw_usart.h"
-#include "hw_msp.h"
 #include "debug.h"
 
-
-typedef enum
-{
-  HW_UNLOCKED = 0x00U,
-  HW_LOCKED   = 0x01U
-} HW_LockTypeDef;
-
-#define HW_LOCK(__HANDLE__)               \
-  do {                                    \
-    if ((__HANDLE__)->Lock == HW_LOCKED)  \
-    {                                     \
-      return;                             \
-    }                                     \
-    else                                  \
-    {                                     \
-      (__HANDLE__)->Lock = HW_LOCKED;     \
-    }                                     \
-  } while (0)
-
-#define HW_UNLOCK(__HANDLE__)             \
-  do {                                    \
-    (__HANDLE__)->Lock = HW_UNLOCKED;     \
-  } while (0)
+/******************************************************************************/
 
 #ifdef __cplusplus
 }

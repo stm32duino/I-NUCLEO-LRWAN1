@@ -84,6 +84,10 @@ This code is based on a file that contains the following:
  *   https://github.com/jpbonn/coremark_lm32/blob/master/ee_printf.c
  */
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 #define TINY_PRINTF
 
 #include <stdarg.h>
@@ -722,3 +726,8 @@ repeat:
   *str = '\0';
   return str - buf;
 }
+
+
+#ifdef __cplusplus
+  }
+#endif

@@ -47,6 +47,8 @@
 #ifndef __TINY_VSNPRINTF_H__
 #define __TINY_VSNPRINTF_H__
 
+#include "hw.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
