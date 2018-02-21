@@ -157,6 +157,9 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
   uint8_t key[16];
   ATEerror_t ret;
 
+  //HACK: remove duty cycle to be able to send again a Join Request
+  setDutyCycle(false);
+
   // Can be optional
   if(appEui != NULL) {
     keyCharToInt(appEui, key, 16);
@@ -179,6 +182,8 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
           }
           ret = Lora_JoinAccept();
         } while(ret != AT_OK);
+        //HACK: enable again duty cycle
+        setDutyCycle(true);
         return 1;
       }
     }
