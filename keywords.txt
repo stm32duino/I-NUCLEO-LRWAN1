@@ -1,0 +1,68 @@
+#######################################
+# Syntax Coloring Map For I-NUCLEO-LRWAN1
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+LoRaWANNodeClass	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+reset	KEYWORD2
+sleep	KEYWORD2
+wakeup	KEYWORD2
+
+joinABP		KEYWORD2
+joinOTAA	KEYWORD2
+
+receiveFrame	KEYWORD2
+sendFrame	KEYWORD2
+
+getFWVersion	KEYWORD2
+getVersion	KEYWORD2
+getDevAddr	KEYWORD2
+getAppSKey	KEYWORD2
+getNwkSKey	KEYWORD2
+getAppEUI	KEYWORD2
+getAppKey	KEYWORD2
+getDevEUI	KEYWORD2
+
+getBand		KEYWORD2
+setBand		KEYWORD2
+getDutyCycle	KEYWORD2
+setDutyCycle	KEYWORD2
+getAdaptativeDataRate	KEYWORD2
+setAdaptativeDataRate	KEYWORD2
+getDataRate	KEYWORD2
+setDataRate	KEYWORD2
+getPublicNwkMode	KEYWORD2
+setPublicNwkMode	KEYWORD2
+getRx1Delay	KEYWORD2
+setRx1Delay	KEYWORD2
+getJoinRx1Delay	KEYWORD2
+setJoinRx1Delay	KEYWORD2
+
+IS_BAND	KEYWORD2
+IS_CLASS	KEYWORD2
+
+#######################################
+# Instances (KEYWORD1)
+#######################################
+
+loraNode	KEYWORD1
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+LORA_BAND_EU_868	LITERAL1
+LORA_BAND_US_915	LITERAL1
+LORA_SEND_DELAYED	LITERAL1
+LORA_SEND_ERROR	LITERAL1
+UNCONFIRMED 	LITERAL1
+CONFIRMED	LITERAL1
