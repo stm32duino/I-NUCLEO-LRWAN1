@@ -27,7 +27,7 @@ as a simple LoRa® radio module.
 * The module supports only class A.
 * Sleep mode is not supported in OTAA mode with the version 2.6 of the firmware.
 * The same USART is shared between I-NUCLEO-LRWAN1 LoRa® expansion board and
-Nucleo boards. See UM1724, 6.8 section to solve the issue.
+Nucleo-64 boards. See UM1724, §6.8 section to solve the issue.
 
 ## Examples
 
