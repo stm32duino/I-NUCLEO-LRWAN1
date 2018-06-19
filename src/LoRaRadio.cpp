@@ -71,6 +71,7 @@ LoraRadio::LoraRadio()
 bool LoraRadio::begin(HardwareSerial *serialx)
 {
   uint8_t nbTry = 0;
+  uint8_t enable = 0;
 
   if(serialx == NULL) {
     return false;
@@ -83,8 +84,8 @@ bool LoraRadio::begin(HardwareSerial *serialx)
 
   LoRa_DumyRequest();
 
-  //Echo mode must be disabled
-  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, 0);
+  // Local echo mode must be disabled
+  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
 
   // Enable Lora module
   /*

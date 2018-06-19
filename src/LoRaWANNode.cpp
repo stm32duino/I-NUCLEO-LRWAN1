@@ -54,6 +54,7 @@ LoRaWANNodeClass::LoRaWANNodeClass()
 bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t loraClass)
 {
   uint8_t nbTry = 0;
+  uint8_t enable = 0;
 
   if(!IS_BAND(band) || !IS_CLASS(loraClass) || (serialx == NULL)) {
     return 0;
@@ -71,8 +72,8 @@ bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t lora
 
   LoRa_DumyRequest();
 
-  //Echo mode must be disabled
-  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, 0);
+  // Local echo mode must be disabled
+  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
 
   // Enable Lora module
   /*
