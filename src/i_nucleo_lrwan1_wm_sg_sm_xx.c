@@ -353,6 +353,7 @@ static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
     case  AT_CLASS:    /* Not supported on V2.5 USI FW version */
     case  AT_WDCT:     /* Supported */
     case  AT_DEFMODE:
+    case  AT_VERB:     /* Supported since V2.8 USI FW version */
       /* Format = FORMAT_8_D_PARAM;*/
       if(Marker == SET_MARKER) {
         value_8 =  *(uint8_t*)ptr;
