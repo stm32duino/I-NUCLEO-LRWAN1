@@ -141,14 +141,6 @@ void HW_UART_Modem_Flush(void)
   }
 }
 
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
-
 #ifdef __cplusplus
  }
 #endif

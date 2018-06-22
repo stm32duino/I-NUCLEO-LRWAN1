@@ -40,14 +40,14 @@
 
 #include "hw.h"
 
-/* LoRa band */
+// LoRa band
 #define  LORA_BAND_EU_868                                0U
 #define  LORA_BAND_US_915                                1U
 
 #define IS_BAND(band) ((band == LORA_BAND_EU_868)  || (band == LORA_BAND_US_915))
 
-/* Lorawan Class */
-/* NOTE: the USI module supports only the class A!!! */
+// Lorawan Class
+// NOTE: the USI module supports only the class A!!!
 #define  LORA_CLASS_A                                0U
 #define  LORA_CLASS_B                                1U
 #define  LORA_CLASS_C                                2U
@@ -61,15 +61,15 @@
 #define  CONFIRMED                          1U
 
 // Send frame error flags
-#define LORA_SEND_DELAYED   0     //busy or duty cycle
-#define LORA_SEND_ERROR     (-1)  //send failed
+#define LORA_SEND_DELAYED   0     // Busy or duty cycle
+#define LORA_SEND_ERROR     (-1)  // Send failed
 
 class LoRaWANNodeClass {
 public:
 
   LoRaWANNodeClass();
-
-  bool begin(HardwareSerial *serialx, uint8_t band, uint8_t loraClass = LORA_CLASS_A);  //begin initialization function
+  // Begin initialization function
+  bool begin(HardwareSerial *serialx, uint8_t band, uint8_t loraClass = LORA_CLASS_A);
 
   bool joinOTAA(const char *appKey, const char *appEui = NULL); //function to configure the otaa parameters
   bool joinABP(const char *devAddr, const char *nwkSKey, const char *appSKey); //function to configure the ABP parameters
@@ -95,35 +95,35 @@ public:
   bool setBand(uint8_t band);
   uint8_t getBand(void);
 
-  // set/get duty cycle
+  // Set/get duty cycle
   bool setDutyCycle(bool state);
   bool getDutyCycle(void);
 
-  // set/get adaptative data rate
+  // Set/get adaptative data rate
   bool setAdaptativeDataRate(bool state);
   bool getAdaptativeDataRate(void);
 
-  // set/get data rate (SF and band width)
+  // Set/get data rate (SF and band width)
   bool setDataRate(uint8_t value);
   uint8_t getDataRate(void);
 
   // Reset USI module
   void reset(void);
 
-  // set/get network type
+  // Set/get network type
   bool setPublicNwkMode(bool value);
   uint8_t getPublicNwkMode(void);
 
-  /* enter/exit the sleep mode */
+  // Enter/exit the sleep mode
   bool sleep(void);
   bool wakeup(void);
 
-  // set/get RX1 delay
+  // Set/get RX1 delay
   // NOTE: Delay time of RX2 window is 1000ms larger than RX1 window.
   bool setRx1Delay(uint32_t ms);
   uint32_t getRx1Delay(void);
 
-  // set/get Join Accept RX1 delay
+  // Set/get Join Accept RX1 delay
   // NOTE: Delay time of Join Accept RX2 window is 1000ms larger than RX1 window.
   bool setJoinRx1Delay(uint32_t ms);
   uint32_t getJoinRx1Delay(void);

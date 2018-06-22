@@ -83,14 +83,6 @@ void HW_UART_Modem_Flush(void);
 #ifdef __cplusplus
 }
 #endif
-#endif /*__ usart_H */
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
+#endif /* __usart_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

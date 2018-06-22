@@ -1,8 +1,6 @@
 /******************************************************************************
- * @file    lora_driver.h
+ * @file    lora_driver.h based on V1.1.2
  * @author  MCD Application Team
- * @version V1.1.2
- * @date    08-September-2017
  * @brief   Header for lora driver module
  ******************************************************************************
  * @attention
@@ -75,7 +73,7 @@ typedef enum RetCode
 #define  OTAA_JOIN_MODE                             1
 #define  ABP_JOIN_MODE                              0
 
-// Payload size limitation
+/* Payload size limitation */
 #define MAX_PAYLOAD_LENGTH  64U
 
 

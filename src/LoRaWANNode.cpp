@@ -88,7 +88,7 @@ bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t lora
     }
   }
 
-  //Set band: EU or US.
+  // Set band: EU or US.
   if(getBand() != band) {
     if(!setBand(band)) {
       return 0;
@@ -158,7 +158,7 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
   uint8_t key[16];
   ATEerror_t ret;
 
-  //HACK: remove duty cycle to be able to send again a Join Request
+  // HACK: remove duty cycle to be able to send again a Join Request
   setDutyCycle(false);
 
   // Can be optional
@@ -183,7 +183,7 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
           }
           ret = Lora_JoinAccept();
         } while(ret != AT_OK);
-        //HACK: enable again duty cycle
+        // HACK: enable again duty cycle
         setDutyCycle(true);
         return 1;
       }
@@ -206,7 +206,7 @@ int8_t LoRaWANNodeClass::sendFrame(char frame[], uint8_t length, bool confirmed,
     return LORA_SEND_ERROR;
   }
 
-  //Payload length is limited to 64 bytes.
+  // Payload length is limited to 64 bytes.
   if(length > MAX_PAYLOAD_LENGTH) {
     return LORA_SEND_ERROR;
   }
@@ -299,7 +299,7 @@ void LoRaWANNodeClass::getDevAddr(String *str)
     char tmp[3];
     LoRa_GetDeviceAddress(&addr);
     keyIntToChar(cAddr, (uint8_t*)&addr, 4);
-    //swap characters
+    // Swap characters
     for(uint8_t i = 0; i < 4; i+=2) {
       strncpy(tmp, &cAddr[i], 2);
       strncpy(&cAddr[i], &cAddr[6-i], 2);
