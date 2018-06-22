@@ -20,7 +20,10 @@
 
 #define FRAME_DELAY 300000  // in ms. Every 5 minutes by default.
 
-HardwareSerial SerialLora(PA_1, PA_0);
+// Serial port use to communicate with the USI shield.
+// By default, use D0 (Rx) and D1(Tx).
+// For Nucleo64, see "Known limitations" chapter in the README.md
+HardwareSerial SerialLora(D0, D1);
 
 // Device address, network & application keys
 const char devAddr[] = "ef00cb01";
