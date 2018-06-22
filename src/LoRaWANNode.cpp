@@ -266,24 +266,19 @@ void LoRaWANNodeClass::getVersion(String *str)
   }
 }
 
-/* NOTE: verbose mode is enabled when the 'ATI' command is sent. But it is
-  impossible to remove it (even if +VERB=0 is sent??!!). The AT command driver
-  expects a specific format because the AT_VSSCANF function is a tiny implementation
-  and is not able to parse some characters. The verbose mode must be off.
-  This method and Lora_GetFWVersion() should not be called.
-*/
+/*
+ * @brief  Read the firmware version.
+ * @param  pointer to version number (an Arduino string allocated by caller).
+ * @retval None.
+ */
 void LoRaWANNodeClass::getFWVersion(String *str)
 {
-#if 0
   if(str != NULL) {
     char tmp[10];
     Lora_GetFWVersion((uint8_t *)tmp);
     tmp[9] = '\0';
     str->concat(tmp);
   }
-#else
-  UNUSED(str);
-#endif
 }
 
 /*

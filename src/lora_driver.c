@@ -57,7 +57,7 @@ extern "C" {
 /* External variables --------------------------------------------------------*/
 /*
  * Glogal flag to treat the return value of Lora_GetFWVersion() function
- * which is the only one that is not preceded by '+' charater.
+ * which is the only one that is not preceded by '=' charater.
  * This flag is used in the at_cmd_receive(..) function
  */
 ATCmd_t gFlagException = AT_END_AT;

@@ -477,9 +477,9 @@ static ATEerror_t at_cmd_receive(void *pdata)
           if (gFlagException != AT_FWVERSION) { /* See comment in lora_driver.c */
             ptrChr = strchr(&response[1],'=');  /* Skip the '\0''\r' */
             strcpy(pdata,ptrChr+1);
-            gFlagException = AT_END_AT;
           } else {
             strcpy(pdata,&response[1]);
+            gFlagException = AT_END_AT;
           }
           memset(response, 0x00, 16);
           i= -1; /* Compensate the next index iteration and restart in [0] */
