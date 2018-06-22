@@ -167,24 +167,23 @@ ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
       }
       break;
     case AT_EXCEPT:
-      HAL_Delay(1000);
       Len = at_cmd_format(Cmd, pdata, SET_MARKER);
       HAL_Status = at_cmd_send(Len);
        if(HAL_Status != HAL_OK) {
         return (AT_UART_LINK_ERROR);
       } else {
-        HAL_Delay(1000);
-        HW_UART_Modem_Flush(); /* Clean unread response */
+        Status = at_cmd_receive(NULL);
       }
-      return (AT_OK);
+      break;
     case AT_EXCEPT_1:
       Len = at_cmd_format(Cmd, NULL, SET_MARKER);
       HAL_Status = at_cmd_send(Len);
        if(HAL_Status != HAL_OK) {
           return (AT_UART_LINK_ERROR);
 	   } else {
-         return (AT_OK);
+         Status = at_cmd_receive(NULL);
        }
+      break;
     default:
       DBG_PRINTF("unknow group\n\r");
       break;
@@ -481,14 +480,14 @@ static ATEerror_t at_cmd_receive(void *pdata)
             strcpy(pdata,&response[1]);
             gFlagException = AT_END_AT;
           }
-          memset(response, 0x00, 16);
+          memset(response, 0x00, strlen(response));
           i= -1; /* Compensate the next index iteration and restart in [0] */
           NoReturnCode = 0; /*return code for the Get cmd*/
         } else {
           if (i>1) {
             /*second statement to get back the return code*/
             i= 0;
-            ResponseComplete = 1;   /*when value + return code have been trapped*/
+            ResponseComplete = 1;   /*when value '=' return code have been trapped*/
             RetCode = at_cmd_responseAnalysing(response);
             memset(response, 0x00, 16);
             break;
