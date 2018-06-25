@@ -75,6 +75,12 @@ bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t lora
   // Local echo mode must be disabled
   Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
 
+  // Verbose response must be enabled for the AT parser
+  enable = 1;
+  if (Modem_AT_Cmd(AT_EXCEPT, AT_VERB, &enable) != AT_OK) {
+    AT_VERB_cmd = false;
+  }
+
   // Enable Lora module
   /*
     NOTE: Sometimes if the module is not ready when we call the previous command

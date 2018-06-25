@@ -64,6 +64,7 @@ typedef enum RetCode
 
 /* Exported constants --------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
+extern bool AT_VERB_cmd;
 /* Exported macros -----------------------------------------------------------*/
 
 /* wait time to request Join status*/

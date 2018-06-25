@@ -56,11 +56,17 @@ extern "C" {
 
 /* External variables --------------------------------------------------------*/
 /*
- * Glogal flag to treat the return value of Lora_GetFWVersion() function
+ * Global flag to treat the return value of Lora_GetFWVersion() function
  * which is the only one that is not preceded by '=' charater.
  * This flag is used in the at_cmd_receive(..) function
  */
 ATCmd_t gFlagException = AT_END_AT;
+/*
+ * Depending of firmware version AT+VERB is supported or not.
+ * Introduced with fw 2.8, since this, some AT response format have changed.
+ * This boolean will allow to handle those format.
+ */
+bool AT_VERB_cmd = true;
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -220,7 +226,11 @@ ATEerror_t LoRa_GetKey(ATCmd_t KeyType,uint8_t *PtrKey)
   /* Get the key type from the LoRa device */
   Status = Modem_AT_Cmd(AT_GET, KeyType, PtrTempValueFromDeviceKey);
   if (Status == 0) {
-    AT_VSSCANF((char*)PtrTempValueFromDeviceKey+AT_FRAME_KEY_OFFSET, AT_FRAME_KEY,
+    uint32_t offset = 0;
+    if(!AT_VERB_cmd) {
+      offset = AT_FRAME_KEY_OFFSET;
+    }
+    AT_VSSCANF((char*)PtrTempValueFromDeviceKey+offset, AT_FRAME_KEY,
     &PtrKey[0], &PtrKey[1], &PtrKey[2], &PtrKey[3],
     &PtrKey[4], &PtrKey[5], &PtrKey[6], &PtrKey[7],
     &PtrKey[8], &PtrKey[9], &PtrKey[10], &PtrKey[11],
@@ -250,10 +260,17 @@ ATEerror_t LoRa_GetAppID(uint8_t *AppEui)
 
   Status = Modem_AT_Cmd(AT_GET, AT_APPEUI, PtrTempValueFromDeviceKey);
   if (Status == 0) {
-    AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
+    if(AT_VERB_cmd) {
+      AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
+               "%hhx,%hhx,%hhx,%hhx,%hhx,%hhx,%hhx,%hhx",
+               &AppEui[0], &AppEui[1], &AppEui[2], &AppEui[3],
+               &AppEui[4], &AppEui[5], &AppEui[6], &AppEui[7]);
+    } else {
+      AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
                "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                &AppEui[0], &AppEui[1], &AppEui[2], &AppEui[3],
                &AppEui[4], &AppEui[5], &AppEui[6], &AppEui[7]);
+    }
   }
   return Status;
 }
@@ -279,10 +296,17 @@ ATEerror_t LoRa_GetDeviceID(uint8_t *PtrDeviceID)
 
   Status = Modem_AT_Cmd(AT_GET, AT_DEUI, PtrTempValueFromDeviceKey);
   if (Status == 0) {
-    AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
+    if(AT_VERB_cmd) {
+      AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
+               "%hhx,%hhx,%hhx,%hhx,%hhx,%hhx,%hhx,%hhx",
+      &PtrDeviceID[0], &PtrDeviceID[1], &PtrDeviceID[2], &PtrDeviceID[3],
+      &PtrDeviceID[4], &PtrDeviceID[5], &PtrDeviceID[6], &PtrDeviceID[7]);
+    } else {
+      AT_VSSCANF((char*)PtrTempValueFromDeviceKey,
                "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-    &PtrDeviceID[0], &PtrDeviceID[1], &PtrDeviceID[2], &PtrDeviceID[3],
-    &PtrDeviceID[4], &PtrDeviceID[5], &PtrDeviceID[6], &PtrDeviceID[7]);
+      &PtrDeviceID[0], &PtrDeviceID[1], &PtrDeviceID[2], &PtrDeviceID[3],
+      &PtrDeviceID[4], &PtrDeviceID[5], &PtrDeviceID[6], &PtrDeviceID[7]);
+    }
   }
   return Status;
 }
@@ -308,11 +332,19 @@ ATEerror_t LoRa_GetDeviceAddress(uint32_t *Value)
 
   Status = Modem_AT_Cmd(AT_GET, AT_DADDR, PtrValueFromDevice);
   if (Status == 0) {
+    if(AT_VERB_cmd) {
+      AT_VSSCANF((char*)PtrValueFromDevice, "%hhx,%hhx,%hhx,%hhx",
+      &((unsigned char *)(Value))[3],
+      &((unsigned char *)(Value))[2],
+      &((unsigned char *)(Value))[1],
+      &((unsigned char *)(Value))[0]);
+    } else {
       AT_VSSCANF((char*)PtrValueFromDevice, "%hhx:%hhx:%hhx:%hhx",
       &((unsigned char *)(Value))[3],
       &((unsigned char *)(Value))[2],
       &((unsigned char *)(Value))[1],
       &((unsigned char *)(Value))[0]);
+    }
   }
   return Status;
 }
@@ -650,9 +682,9 @@ ATEerror_t Lora_AsyncDownLinkData(sReceivedDataBinary_t *PtrStructData)
   if (Status == 0) {
     AT_VSSCANF((char*)PtrDataFromNetwork, "%d,%2d",
                &(PtrStructData->Port),&(PtrStructData->DataSize));
-    /* Search the second ',' occurence in the return string */
-    ptrChr = strchr((strchr((char*)&PtrDataFromNetwork[0],',')+1),',');
-	if ((sizebuf=strlen((char*)ptrChr+1)) > DATA_RX_MAX_BUFF_SIZE) {
+    /* Search the last ',' occurence in the return string */
+    ptrChr = strrchr((char*)&PtrDataFromNetwork[0], ',')+1;
+	if ((sizebuf=strlen((char*)ptrChr)) > DATA_RX_MAX_BUFF_SIZE) {
       /* Shrink the Rx buffer to MAX size */
       sizebuf = DATA_RX_MAX_BUFF_SIZE -1;
     }
@@ -660,8 +692,8 @@ ATEerror_t Lora_AsyncDownLinkData(sReceivedDataBinary_t *PtrStructData)
     if(sizebuf == 0) {
       return AT_TEST_PARAM_OVERFLOW;
     }
-    memcpy1(PtrStructData->Buffer, (uint8_t *)ptrChr+1, sizebuf-1);
-    *(PtrStructData->Buffer+sizebuf-1) ='\0';
+    memcpy1(PtrStructData->Buffer, (uint8_t *)ptrChr, sizebuf);
+    *(PtrStructData->Buffer+sizebuf) ='\0';
   }
   return Status;
 }
@@ -803,9 +835,16 @@ ATEerror_t Lora_GetVersion(uint8_t *PtrVersion)
 
   Status = Modem_AT_Cmd(AT_GET, AT_VER, PtrValueFromDevice);
   if (Status == 0) {
-    /* Skip "LoRaWAN v" */
-    ptrChr = strchr((char *)&PtrValueFromDevice[0], 'v');
-    strcpy((char*)PtrVersion,ptrChr+1);
+    if(AT_VERB_cmd) {
+      /* Skip fw version and model */
+      ptrChr = strchr((char *)&PtrValueFromDevice[0], ',');
+      strncpy((char*)PtrVersion, (char *)PtrValueFromDevice,
+              ptrChr - (char *)PtrValueFromDevice);
+	} else {
+      /* Skip "LoRaWAN v" */
+      ptrChr = strchr((char *)&PtrValueFromDevice[0], 'v');
+      strcpy((char*)PtrVersion,ptrChr+1);
+    }
   }
   return Status;
 }
@@ -821,12 +860,32 @@ ATEerror_t Lora_GetFWVersion(uint8_t *PtrFWVersion)
   char *ptrChr;
 
   gFlagException = AT_FWVERSION;
-
   Status = Modem_AT_Cmd(AT_GET, AT_FWVERSION, PtrValueFromDevice);
   if (Status == 0) {
     /* Skip "USI Lora Module Firmware V" prefix */
     ptrChr = strchr((char *)&PtrValueFromDevice[0],'V');
     strcpy((char*)PtrFWVersion,ptrChr+1);
+  } else {
+    /*
+     * Since AT+VERB introduced, Fw version is integrated to AT+VER
+     * <lrwan_ver>,<fw_ver>
+     * ATI is marked as removed but always available.
+     */
+    if(AT_VERB_cmd) {
+      Status = Modem_AT_Cmd(AT_GET, AT_VER, PtrValueFromDevice);
+      if (Status == 0) {
+        char *ptrChr2;
+        /* Skip LoRaWan version and strip model */
+        ptrChr = strchr((char *)&PtrValueFromDevice[0], ',');
+        ptrChr2 = strchr(ptrChr+1,',');
+        if (ptrChr2 == NULL) {
+          strcpy((char*)PtrFWVersion, ptrChr+1);
+        } else {
+          strncpy((char*)PtrFWVersion, ptrChr+1, ptrChr2 - ptrChr - 1);
+          PtrFWVersion[ptrChr2 - ptrChr - 1] = '\0';
+        }
+      }
+    }
   }
   return Status;
 }

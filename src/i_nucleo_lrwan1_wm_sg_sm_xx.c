@@ -622,9 +622,11 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *pdata)
           ptrChr = strchr(&response[1],'='); /* Skip the '\0''\r' */
           strcpy(pdata,ptrChr+1);
           pdata = (char*)pdata + strlen(ptrChr+1);
-          /* Introduce separator in order to discriminate port, size and data */
-          *((char*)pdata) = ',';
-          pdata = (char*)pdata + 1;
+          if(!(DlinkData_Complete & (0x1u <<2))) {
+            /* Introduce separator in order to discriminate port, size and data */
+            *((char*)pdata) = ',';
+            pdata = (char*)pdata + 1;
+          }
         }
 
         memset(response, 0x00, 16);
@@ -695,8 +697,12 @@ static ATEerror_t at_cmd_AsyncEventAnalysing(const char *ReturnResp, int8_t *Fla
         /* Following statement for network downlink data */
         if (strncmp(ReturnResp, "+RCV", sizeof("+RCV")-1) == 0) {
           /* Event has been identified */
-         *Flag <<= (0x1U);
-         status = AT_OK;
+          if(*Flag == 0x1U) {
+            *Flag = (0x1U << 2);
+          } else {
+            *Flag <<= (0x1U);
+          }
+          status = AT_OK;
         } else {
           /* Following statement for network downlink data */
           if (strncmp(ReturnResp, "+PS", sizeof("+PS")-1) == 0) {

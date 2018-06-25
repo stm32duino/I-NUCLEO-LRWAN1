@@ -87,6 +87,12 @@ bool LoraRadio::begin(HardwareSerial *serialx)
   // Local echo mode must be disabled
   Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
 
+  // Verbose response must be enabled for the AT parser
+  enable = 1;
+  if (Modem_AT_Cmd(AT_EXCEPT, AT_VERB, &enable) != AT_OK) {
+    AT_VERB_cmd = false;
+  }
+
   // Enable Lora module
   /*
     NOTE: Sometimes if the module is not ready when we call the previous command
@@ -433,10 +439,15 @@ uint8_t LoraRadio::parseRcvData(void *pdata)
         // First statement to get back the return value
         response[i] = '\0';
         ptrChr = strchr(&response[0],'+'); // Skip the '\0''\r'
-        if (strncmp(ptrChr, "+RCV:", sizeof("+RCV:")-1) == 0) {
+        if (strncmp(ptrChr, "+RCV", sizeof("+RCV")-1) == 0) {
           RetCode = AT_OK;
-          ptrChr = strchr(&response[1],':'); // Skip the '\0''\r'
-          strcpy((char *)pdata,ptrChr+2);
+          if(AT_VERB_cmd) {
+            ptrChr = strrchr(&response[1], ',');
+            strcpy((char *)pdata, ptrChr+1);
+          } else {
+            ptrChr = strchr(&response[1],':');
+            strcpy((char *)pdata, ptrChr+2);
+		  }
           ResponseComplete = 1;
         } else {
           RetCode = AT_END_ERROR;
