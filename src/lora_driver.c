@@ -963,7 +963,7 @@ ATEerror_t LoRa_DumyRequest(void)
     /* Ssecond iteration to align Host-Modem interface */
     Status = Modem_AT_Cmd(AT_EXCEPT_1, AT, NULL);
     /* Assumption: to be sure that modem is ready */
-    HAL_Delay(1000);
+    delay(1000);
   }
   return(Status);
 }
@@ -975,7 +975,7 @@ ATEerror_t LoRa_DumyRequest(void)
 **************************************************************/
 ATEerror_t Lora_RestoreConfigTable(void)
 {
-  uint8_t Restore = RESET;
+  uint8_t Restore = 0;
 
   return Modem_AT_Cmd(AT_SET, AT_WDCT, &Restore);
 }

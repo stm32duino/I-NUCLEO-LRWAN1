@@ -78,7 +78,7 @@ static char response[DATA_RX_MAX_BUFF_SIZE];
 /* private functions ------------------------------------------------------- */
 static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker);
 
-static HAL_StatusTypeDef at_cmd_send(uint16_t len);
+static bool at_cmd_send(uint16_t len);
 
 static ATEerror_t at_cmd_receive(void *pdata);
 
@@ -98,7 +98,7 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *ptr);
 *****************************************************************************/
 ATEerror_t Modem_IO_Init( void *serial )
 {
-  if ( HW_UART_Modem_Init(serial, BAUD_RATE)== HAL_OK ) {
+  if (HW_UART_Modem_Init(serial, BAUD_RATE)) {
     return AT_OK;
   } else {
     return AT_UART_LINK_ERROR;
@@ -126,7 +126,6 @@ void Modem_IO_DeInit( void )
 ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
 {
   ATEerror_t Status = AT_END_ERROR;
-  HAL_StatusTypeDef HAL_Status;
   uint16_t Len;
 
   /* Reset At_cmd buffer for each transmission */
@@ -135,8 +134,7 @@ ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
   switch (at_group) {
     case AT_CTRL:
       Len = at_cmd_format( Cmd, NULL, CTRL_MARKER);
-      HAL_Status = at_cmd_send(Len);
-      if(HAL_Status != HAL_OK) {
+      if(!at_cmd_send(Len)) {
         return (AT_UART_LINK_ERROR);
       }
       if(Cmd != AT_RESET) {
@@ -145,16 +143,14 @@ ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
       break;
     case AT_SET:
       Len = at_cmd_format(Cmd, pdata, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-      if(HAL_Status != HAL_OK) {
+      if(!at_cmd_send(Len)) {
         return (AT_UART_LINK_ERROR);
       }
       Status = at_cmd_receive(NULL);
       break;
     case AT_GET:
       Len = at_cmd_format(Cmd, pdata, GET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-      if(HAL_Status != HAL_OK) {
+      if(!at_cmd_send(Len)) {
         return (AT_UART_LINK_ERROR);
       }
       Status = at_cmd_receive(pdata);
@@ -168,8 +164,7 @@ ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
       break;
     case AT_EXCEPT:
       Len = at_cmd_format(Cmd, pdata, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-       if(HAL_Status != HAL_OK) {
+       if(!at_cmd_send(Len)) {
         return (AT_UART_LINK_ERROR);
       } else {
         Status = at_cmd_receive(NULL);
@@ -177,12 +172,11 @@ ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
       break;
     case AT_EXCEPT_1:
       Len = at_cmd_format(Cmd, NULL, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-       if(HAL_Status != HAL_OK) {
-          return (AT_UART_LINK_ERROR);
-	   } else {
-         Status = at_cmd_receive(NULL);
-       }
+      if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
+	  } else {
+        Status = at_cmd_receive(NULL);
+      }
       break;
     default:
       DBG_PRINTF("unknow group\n\r");
@@ -401,11 +395,11 @@ static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
 /******************************************************************************
   * @brief This function sends an AT cmd to the slave device
   * @param len: length of the AT cmd to be sent
-  * @retval HAL return code
+  * @retval boolean
 ******************************************************************************/
-static HAL_StatusTypeDef at_cmd_send(uint16_t len)
+static bool at_cmd_send(uint16_t len)
 {
-  HAL_StatusTypeDef RetCode;
+  bool RetCode;
   uint16_t size;
 
   DBG_PRINTF("cmd: %s\r\n", LoRa_AT_Cmd_Buff);
@@ -413,9 +407,9 @@ static HAL_StatusTypeDef at_cmd_send(uint16_t len)
   /* Transmit the command from master to slave */
   size = HW_UART_Modem_Write((uint8_t*)LoRa_AT_Cmd_Buff, len);
   if(size == len ) {
-    RetCode = HAL_OK;
+    RetCode = true;
   } else {
-    RetCode = HAL_ERROR;
+    RetCode = false;
   }
   return RetCode;
 }
@@ -441,7 +435,7 @@ static ATEerror_t at_cmd_receive(void *pdata)
 
   while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
@@ -529,7 +523,7 @@ static ATEerror_t at_cmd_receive_async_event(void)
 
   while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
@@ -595,7 +589,7 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *pdata)
 
   while (!(DlinkData_Complete & (0x1u <<2))) {  /* Received sequence not complete */
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > ASYNC_EVENT_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }

@@ -219,13 +219,6 @@ ATEerror_t Modem_IO_Init( void *serial ) ;
 void Modem_IO_DeInit( void ) ;
 
 /******************************************************************************
- * @brief  Receive data in interrupt mode from modem UART interface.
- * @param  UART handle
- * @retval None
-*****************************************************************************/
-void Modem_UART_Receive_IT(UART_HandleTypeDef *huart);
-
-/******************************************************************************
  * @brief  Handle the AT cmd following their Groupp type
  * @param  at_group AT group [control, set , get)
  *         Cmd AT command

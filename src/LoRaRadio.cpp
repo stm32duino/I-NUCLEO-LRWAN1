@@ -422,7 +422,7 @@ uint8_t LoraRadio::parseRcvData(void *pdata)
 
   while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
