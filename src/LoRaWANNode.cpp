@@ -54,6 +54,7 @@ LoRaWANNodeClass::LoRaWANNodeClass()
 bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t loraClass)
 {
   uint8_t nbTry = 0;
+  uint8_t enable = 0;
 
   if(!IS_BAND(band) || !IS_CLASS(loraClass) || (serialx == NULL)) {
     return 0;
@@ -71,8 +72,14 @@ bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t lora
 
   LoRa_DumyRequest();
 
-  //Echo mode must be disabled
-  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, 0);
+  // Local echo mode must be disabled
+  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
+
+  // Verbose response must be enabled for the AT parser
+  enable = 1;
+  if (Modem_AT_Cmd(AT_EXCEPT, AT_VERB, &enable) != AT_OK) {
+    AT_VERB_cmd = false;
+  }
 
   // Enable Lora module
   /*
@@ -87,7 +94,7 @@ bool LoRaWANNodeClass::begin(HardwareSerial *serialx, uint8_t band, uint8_t lora
     }
   }
 
-  //Set band: EU or US.
+  // Set band: EU or US.
   if(getBand() != band) {
     if(!setBand(band)) {
       return 0;
@@ -157,7 +164,7 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
   uint8_t key[16];
   ATEerror_t ret;
 
-  //HACK: remove duty cycle to be able to send again a Join Request
+  // HACK: remove duty cycle to be able to send again a Join Request
   setDutyCycle(false);
 
   // Can be optional
@@ -182,7 +189,7 @@ bool LoRaWANNodeClass::joinOTAA(const char *appKey, const char *appEui)
           }
           ret = Lora_JoinAccept();
         } while(ret != AT_OK);
-        //HACK: enable again duty cycle
+        // HACK: enable again duty cycle
         setDutyCycle(true);
         return 1;
       }
@@ -205,7 +212,7 @@ int8_t LoRaWANNodeClass::sendFrame(char frame[], uint8_t length, bool confirmed,
     return LORA_SEND_ERROR;
   }
 
-  //Payload length is limited to 64 bytes.
+  // Payload length is limited to 64 bytes.
   if(length > MAX_PAYLOAD_LENGTH) {
     return LORA_SEND_ERROR;
   }
@@ -265,24 +272,19 @@ void LoRaWANNodeClass::getVersion(String *str)
   }
 }
 
-/* NOTE: verbose mode is enabled when the 'ATI' command is sent. But it is
-  impossible to remove it (even if +VERB=0 is sent??!!). The AT command driver
-  expects a specific format because the AT_VSSCANF function is a tiny implementation
-  and is not able to parse some characters. The verbose mode must be off.
-  This method and Lora_GetFWVersion() should not be called.
-*/
+/*
+ * @brief  Read the firmware version.
+ * @param  pointer to version number (an Arduino string allocated by caller).
+ * @retval None.
+ */
 void LoRaWANNodeClass::getFWVersion(String *str)
 {
-#if 0
   if(str != NULL) {
     char tmp[10];
     Lora_GetFWVersion((uint8_t *)tmp);
     tmp[9] = '\0';
     str->concat(tmp);
   }
-#else
-  UNUSED(str);
-#endif
 }
 
 /*
@@ -298,7 +300,7 @@ void LoRaWANNodeClass::getDevAddr(String *str)
     char tmp[3];
     LoRa_GetDeviceAddress(&addr);
     keyIntToChar(cAddr, (uint8_t*)&addr, 4);
-    //swap characters
+    // Swap characters
     for(uint8_t i = 0; i < 4; i+=2) {
       strncpy(tmp, &cAddr[i], 2);
       strncpy(&cAddr[i], &cAddr[6-i], 2);

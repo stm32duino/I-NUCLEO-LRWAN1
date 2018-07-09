@@ -1,8 +1,6 @@
  /*******************************************************************************
-  * @file    i_nucleo_lrwan1_wm_sg_sm_xx.c
+  * @file    i_nucleo_lrwan1_wm_sg_sm_xx.c based on V1.0.1
   * @author  MCD Application Team
-  * @version V1.0.1
-  * @date    01-June-2017
   * @brief   driver I_NUCLEO_LRWAN1 for WM_SG_SM_XX modem board
   ******************************************************************************
   * @attention
@@ -49,45 +47,38 @@
 #include <stdarg.h>
 
 /* External variables --------------------------------------------------------*/
-extern ATCmd_t gFlagException;  /*defined in lora_driver.c*/
-
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-
-
-/* Private macro -------------------------------------------------------------*/
-
+extern ATCmd_t gFlagException;  /* Defined in lora_driver.c */
 
 /* Private variables ---------------------------------------------------------*/
 
-char LoRa_AT_Cmd_Buff[DATA_TX_MAX_BUFF_SIZE];    /* Buffer used for AT cmd transmission */
-
-static uint16_t Offset = 0;   /*write position needed for send command*/
-
-static char response[DATA_RX_MAX_BUFF_SIZE];  /*has to be the largest of the response*/
-                                              /*not only for return code but also for*/
-                                              /*return value: exemple KEY*/
+/* Buffer used for AT cmd transmission */
+char LoRa_AT_Cmd_Buff[DATA_TX_MAX_BUFF_SIZE];
+/* Write position needed for send command */
+static uint16_t Offset = 0;
+/*
+ * Buffer has to be the largest of the response not only for return code
+ * but also for return value: exemple KEY
+ */
+static char response[DATA_RX_MAX_BUFF_SIZE];
 
 /****************************************************************************/
 /*here we have to include a list of AT cmd by the way of #include<file>     */
 /*this file will be preprocessed for CmdTab and ATE_RetCode definition      */
 /****************************************************************************/
 
-#undef    __ATCMD_MODEM_H__    /*to avoid recursive include*/
-#define   AT_CMD_STRING
-#define   AT_ERROR_STRING
-#undef    AT_CMD_INDEX
-#undef    AT_ERROR_INDEX
-#include "atcmd_modem.h"   /*to include WM_SG_SM_42 specific string AT cmd definition*/
+/* Avoid recursive include */
+#undef  __ATCMD_MODEM_H__
+#define AT_CMD_STRING
+#define AT_ERROR_STRING
+#undef  AT_CMD_INDEX
+#undef  AT_ERROR_INDEX
+/* Include WM_SG_SM_42 specific string AT cmd definition */
+#include "atcmd_modem.h"
 
-
-/* Private function prototypes -----------------------------------------------*/
 /* private functions ------------------------------------------------------- */
-
-
 static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker);
 
-static HAL_StatusTypeDef at_cmd_send(uint16_t len);
+static bool at_cmd_send(uint16_t len);
 
 static ATEerror_t at_cmd_receive(void *pdata);
 
@@ -99,12 +90,6 @@ static ATEerror_t at_cmd_AsyncEventAnalysing(const char *ReturnResp,int8_t *Flag
 
 static ATEerror_t at_cmd_receive_async_event_downlink_data(void *ptr);
 
-
-//static void at_cmd_send_noresp(uint16_t len);
-
-/* Exported functions ------------------------------------------------------- */
-
-
 /******************************************************************************
  * @brief  Configures modem UART interface.
  * @param  None
@@ -113,16 +98,12 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *ptr);
 *****************************************************************************/
 ATEerror_t Modem_IO_Init( void *serial )
 {
-  if ( HW_UART_Modem_Init(serial, BAUD_RATE)== HAL_OK )
-  {
+  if (HW_UART_Modem_Init(serial, BAUD_RATE)) {
     return AT_OK;
-  }
-  else
-  {
+  } else {
     return AT_UART_LINK_ERROR;
   }
 }
-
 
 /******************************************************************************
  * @brief  Deinitialise modem UART interface.
@@ -143,91 +124,66 @@ void Modem_IO_DeInit( void )
  * @retval module status
  *****************************************************************************/
 ATEerror_t  Modem_AT_Cmd(ATGroup_t at_group, ATCmd_t Cmd, void *pdata )
-
 {
-ATEerror_t Status = AT_END_ERROR;
-HAL_StatusTypeDef HAL_Status;
-uint16_t Len;
+  ATEerror_t Status = AT_END_ERROR;
+  uint16_t Len;
 
-  /*reset At_cmd buffer for each transmission*/
+  /* Reset At_cmd buffer for each transmission */
   memset(LoRa_AT_Cmd_Buff, 0x00, sizeof LoRa_AT_Cmd_Buff);
 
-  switch (at_group)
-  {
-  case AT_CTRL:
-  {
-    Len = at_cmd_format( Cmd, NULL, CTRL_MARKER);
-    HAL_Status = at_cmd_send(Len);
-    if(HAL_Status != HAL_OK)
-    {
-        return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-    }
-    if(Cmd != AT_RESET)
-    {
-        Status = at_cmd_receive(NULL);
-        // Status = AT_OK;
-    }
-    break;
-  }
-  case AT_SET:
-  {
-      Len = at_cmd_format(Cmd, pdata, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-      if(HAL_Status != HAL_OK)
-        return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-      Status = at_cmd_receive(NULL);
-    break;
-  }
-  case AT_GET:
-  {
-      Len = at_cmd_format(Cmd, pdata, GET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-      if(HAL_Status != HAL_OK)
-        return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-      Status = at_cmd_receive(pdata);
-    break;
-  }
-  case AT_ASYNC_EVENT:
-  {
-      if (( Cmd == AT_JOIN) || (Cmd == AT) || (Cmd == AT_TXT))
-      Status = at_cmd_receive_async_event();
-      else
-      Status = at_cmd_receive_async_event_downlink_data(pdata);
-    break;
-  }
-  case AT_EXCEPT:
-  {
-      HAL_Delay(1000);
-      Len = at_cmd_format(Cmd, pdata, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-       if(HAL_Status != HAL_OK) {
-        return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-      } else {
-        HAL_Delay(1000);
-        HW_UART_Modem_Flush(); //Clean unread response
+  switch (at_group) {
+    case AT_CTRL:
+      Len = at_cmd_format( Cmd, NULL, CTRL_MARKER);
+      if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
       }
-      return (AT_OK);
-  }
-  case AT_EXCEPT_1:
-  {
+      if(Cmd != AT_RESET) {
+        Status = at_cmd_receive(NULL);
+      }
+      break;
+    case AT_SET:
+      Len = at_cmd_format(Cmd, pdata, SET_MARKER);
+      if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
+      }
+      Status = at_cmd_receive(NULL);
+      break;
+    case AT_GET:
+      Len = at_cmd_format(Cmd, pdata, GET_MARKER);
+      if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
+      }
+      Status = at_cmd_receive(pdata);
+      break;
+    case AT_ASYNC_EVENT:
+      if (( Cmd == AT_JOIN) || (Cmd == AT) || (Cmd == AT_TXT)) {
+        Status = at_cmd_receive_async_event();
+      } else {
+        Status = at_cmd_receive_async_event_downlink_data(pdata);
+      }
+      break;
+    case AT_EXCEPT:
+      Len = at_cmd_format(Cmd, pdata, SET_MARKER);
+       if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
+      } else {
+        Status = at_cmd_receive(NULL);
+      }
+      break;
+    case AT_EXCEPT_1:
       Len = at_cmd_format(Cmd, NULL, SET_MARKER);
-      HAL_Status = at_cmd_send(Len);
-       if(HAL_Status != HAL_OK)
-          return (AT_UART_LINK_ERROR); /*problem on UART transmission*/
-       else
-       {
-         /*Status = at_cmd_receive(NULL);*/
-         return (AT_OK);
-       }
-  }
-  default:
-    DBG_PRINTF("unknow group\n\r");
-    break;
-
+      if(!at_cmd_send(Len)) {
+        return (AT_UART_LINK_ERROR);
+	  } else {
+        Status = at_cmd_receive(NULL);
+      }
+      break;
+    default:
+      DBG_PRINTF("unknow group\n\r");
+      break;
   } /*end switch(at_group)*/
   return Status;
 }
-
 
 /******************************************************************************
  * @brief  format the cmd in order to be send
@@ -238,261 +194,225 @@ uint16_t Len;
  *****************************************************************************/
 static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
 {
-uint16_t len;      /*length of the formated command*/
-//Fmt_t Format;      /*type of format*/
-uint8_t *PtrValue; /*for IN/OUT buffer*/
-uint32_t value;    /*for 32_02X and 32_D*/
-uint8_t value_8;   /*for 8_D*/
-//char value_c;      /*for 8_C*/
-
-
+  uint16_t len;      /* Length of the formated command */
+  uint8_t *PtrValue; /* For IN/OUT buffer */
+  uint32_t value;    /* For 32_02X and 32_D */
+  uint8_t value_8;   /* For 8_D */
 
   switch (Cmd){
-  case AT:              /*supported*/
-  case AT_RESET:        /*supported*/
-  case AT_SLEEP:        /*supported*/
-  case AT_FWVERSION:    /*supported*/
-  {
-    /*Format = FORMAT_VOID_PARAM;*/
-    len = AT_VPRINTF("%s%s%s",AT_HEADER,CmdTab[Cmd],AT_TAIL);
-    break;
-  }
-  case  AT_RECV:
-  case  AT_VER:
-  {
-    /*Format = FORMAT_PLAIN_TEXT;*/
-    if(Marker == SET_MARKER)
-    {
-      len = AT_VPRINTF("%s%s%s%d%s%s\r\n",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,((sSendDataString_t *)ptr)->Port,
-                                                              AT_COLON,((sSendDataString_t *)ptr)->Buffer);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case  AT_SEND:      /*supported - sendB replaced by send - just one send mode on USI*/
-  case  AT_RECVB:     /*not supported*/
-  {
-  /*Format = FORMAT_BINARY_TEXT; */
-    if(Marker == SET_MARKER)
-    {
-      Offset = AT_VPRINTF("%s%s%s%d%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,((sSendDataBinary_t *)ptr)->Port,AT_COMMA);
-      unsigned i;
-      for (i = 0; i < ((sSendDataBinary_t *)ptr)->DataSize; i++)
-      {
-        Offset+=AT_VPRINTF("%02x", ((sSendDataBinary_t *)ptr)->Buffer[i]);
+    case AT:         /* Supported */
+    case AT_RESET:   /* Supported */
+    case AT_SLEEP:   /* Supported */
+    case AT_FWVERSION: /* Supported */
+      /* Format = FORMAT_VOID_PARAM; */
+      len = AT_VPRINTF("%s%s%s",AT_HEADER,CmdTab[Cmd],AT_TAIL);
+      break;
+    case  AT_RECV:
+    case  AT_VER:
+      /* Format = FORMAT_PLAIN_TEXT; */
+      if(Marker == SET_MARKER) {
+        len = AT_VPRINTF("%s%s%s%d%s%s\r\n", AT_HEADER, CmdTab[Cmd],
+                         AT_SET_MARKER,((sSendDataString_t *)ptr)->Port,
+                         AT_COLON,((sSendDataString_t *)ptr)->Buffer);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd],
+                         AT_GET_MARKER,AT_TAIL);
       }
-      Offset+=AT_VPRINTF("%s%d%s",AT_COMMA,((sSendDataBinary_t *)ptr)->Ack,AT_TAIL);
-      /*Offset+=AT_VPRINTF("\r\n");*/
-      len = Offset;
-      Offset = 0;
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case AT_TXT:
-  {
-    /*Format = FORMAT_BINARY_TEXT; */
-    if(Marker == SET_MARKER)
-    {
-      Offset = AT_VPRINTF("%s%s%s%d%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,((sSendData_t *)ptr)->NbRep,AT_COMMA);
-      unsigned i;
-      for (i = 0; i < ((sSendData_t *)ptr)->DataSize; i++)
-      {
+      break;
+    case  AT_SEND:   /* Supported - sendB replaced by send - just one send mode on USI */
+    case  AT_RECVB:  /* Not supported*/
+      /* Format = FORMAT_BINARY_TEXT; */
+      if(Marker == SET_MARKER) {
+        Offset = AT_VPRINTF("%s%s%s%d%s", AT_HEADER, CmdTab[Cmd],
+                            AT_SET_MARKER, ((sSendDataBinary_t *)ptr)->Port,
+                            AT_COMMA);
+        for (uint32_t i = 0; i < ((sSendDataBinary_t *)ptr)->DataSize; i++) {
+          Offset+=AT_VPRINTF("%02x", ((sSendDataBinary_t *)ptr)->Buffer[i]);
+        }
+        Offset+=AT_VPRINTF("%s%d%s", AT_COMMA, ((sSendDataBinary_t *)ptr)->Ack,
+                           AT_TAIL);
+        len = Offset;
+        Offset = 0;
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case AT_TXT:
+      /* Format = FORMAT_BINARY_TEXT; */
+      if(Marker == SET_MARKER) {
+      Offset = AT_VPRINTF("%s%s%s%d%s", AT_HEADER, CmdTab[Cmd], AT_SET_MARKER,
+                         ((sSendData_t *)ptr)->NbRep, AT_COMMA);
+      for (uint32_t i = 0; i < ((sSendData_t *)ptr)->DataSize; i++) {
         Offset+=AT_VPRINTF("%02x", ((sSendData_t *)ptr)->Buffer[i]);
       }
-      Offset+=AT_VPRINTF("%s",AT_TAIL);
-      len = Offset;
-      Offset = 0;
-    }
-    else
-    {
-      len = 0;
-    }
-    break;
-  }
-  case AT_APPKEY:    /* USI equivalent AK -- supported*/
-  case AT_NWKSKEY:   /* USI equivalent NSK -- supported*/
-  case AT_APPSKEY:   /* USI equivalent ASK -- supported*/
-  {
-    /*Format = FORMAT_16_02X_PARAM;*/
-    PtrValue = (uint8_t*) ptr;
-    if(Marker == SET_MARKER)
-    {
-      len = AT_VPRINTF("%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
-                      AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
-                      PtrValue[0],AT_SEPARATOR, PtrValue[1],AT_SEPARATOR,
-                      PtrValue[2],AT_SEPARATOR, PtrValue[3],AT_SEPARATOR,
-                      PtrValue[4],AT_SEPARATOR, PtrValue[5],AT_SEPARATOR,
-          PtrValue[6],AT_SEPARATOR, PtrValue[7],AT_SEPARATOR,
-                      PtrValue[8],AT_SEPARATOR, PtrValue[9],AT_SEPARATOR,
-          PtrValue[10],AT_SEPARATOR, PtrValue[11],AT_SEPARATOR,
-                      PtrValue[12],AT_SEPARATOR, PtrValue[13],AT_SEPARATOR,
-          PtrValue[14],AT_SEPARATOR, PtrValue[15], AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case AT_DADDR:       /*supported*/
-  case AT_NWKID:       /*N/A*/
-  {
-    /*Format = FORMAT_32_02X_PARAM;*/
-    value =  *(uint32_t*)ptr;
-    if(Marker == SET_MARKER)
-    {
-      len = AT_VPRINTF("%s%s%s%02x%s%02x%s%02x%s%02x%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
-                    (unsigned)((unsigned char *)(&value))[3], AT_SEPARATOR,
-                    (unsigned)((unsigned char *)(&value))[2], AT_SEPARATOR,
-                    (unsigned)((unsigned char *)(&value))[1], AT_SEPARATOR,
-                    (unsigned)((unsigned char *)(&value))[0], AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case AT_APPEUI:     /*supported*/
-  case AT_DEUI:       /* USI equivalent EUI - not relevant for SET since burned unique IEEE EUI64 at factory. */
-  {
-    /*Format = FORMAT_8_02X_PARAM;*/
-    PtrValue = (uint8_t*)ptr;
-    if(Marker == SET_MARKER)
-    {
-      len = AT_VPRINTF("%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
-                      AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
-                      PtrValue[0],AT_SEPARATOR, PtrValue[1],AT_SEPARATOR, PtrValue[2],AT_SEPARATOR,
-                      PtrValue[3],AT_SEPARATOR, PtrValue[4],AT_SEPARATOR, PtrValue[5],AT_SEPARATOR,
-                      PtrValue[6],AT_SEPARATOR, PtrValue[7],AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case  AT_RX2FQ:    /*N/A*/
-  case  AT_RX1DL:    /* USI equivalent RX1DT supported*/
-  case  AT_RX2DL:    /* USI equivalent RX2DT - supported*/
-  case  AT_JN1DL:    /* USI equivalent JRX1DT - supported*/
-  case  AT_JN2DL:    /* USI equivalent JRX2DT - supported*/
-  case  AT_FCU:      /* USI equivalent -> not supported*/
-  case  AT_FCD:      /* USI equivalent -> not supported*/
-  {
-    /*Format = FORMAT_32_D_PARAM;*/
-    if(Marker == SET_MARKER)
-    {
+        Offset+=AT_VPRINTF("%s", AT_TAIL);
+        len = Offset;
+        Offset = 0;
+      } else {
+        len = 0;
+      }
+      break;
+    case AT_APPKEY:  /* Supported - USI equivalent AK */
+    case AT_NWKSKEY: /* Supported - USI equivalent NSK */
+    case AT_APPSKEY: /* Supported - USI equivalent ASK */
+      /* Format = FORMAT_16_02X_PARAM; */
+      PtrValue = (uint8_t*) ptr;
+      if(Marker == SET_MARKER) {
+        len = AT_VPRINTF(
+  "%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
+                      AT_HEADER, CmdTab[Cmd], AT_SET_MARKER,
+                      PtrValue[0], AT_SEPARATOR, PtrValue[1], AT_SEPARATOR,
+                      PtrValue[2], AT_SEPARATOR, PtrValue[3], AT_SEPARATOR,
+                      PtrValue[4], AT_SEPARATOR, PtrValue[5], AT_SEPARATOR,
+                      PtrValue[6], AT_SEPARATOR, PtrValue[7], AT_SEPARATOR,
+                      PtrValue[8], AT_SEPARATOR, PtrValue[9], AT_SEPARATOR,
+                      PtrValue[10], AT_SEPARATOR, PtrValue[11], AT_SEPARATOR,
+                      PtrValue[12], AT_SEPARATOR, PtrValue[13], AT_SEPARATOR,
+                      PtrValue[14], AT_SEPARATOR, PtrValue[15], AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case AT_DADDR:   /* Supported */
+    case AT_NWKID:   /* N/A */
+      /*Format = FORMAT_32_02X_PARAM;*/
       value =  *(uint32_t*)ptr;
-      len = AT_VPRINTF("%s%s%s%u%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,value, AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case  AT_JOIN:        /* supported*/
-  case  AT_ATE:         /* supported*/
-  case  AT_DR:          /* supported*/
-  case  AT_RX2DR:       /* supported*/
-  case  AT_BAND:        /* supported*/
-  case  AT_TXP:         /* N/A*/
-  case  AT_NJM:         /* N/A*/
-  case  AT_PNM:         /* supported - USI equivalent NTYP*/
-  case  AT_DCS:         /* supported - USI equivalent DC - Disabling duty cycle for testing only. It should be enabled for shipping*/
-  case  AT_ADR:         /* supported*/
-  case  AT_CFM:         /* N/A*/
-  case  AT_CFS:         /* N/A*/
-  case  AT_BAT:         /* supported*/
-  case  AT_RSSI:        /* not supported by USI FW version*/
-  case  AT_SNR:         /* not supported by USI FW version*/
-  case  AT_NJS:         /* N/A*/
-  case  AT_CLASS:       /* not supported on V2.5 USI FW version*/
-  case  AT_WDCT:        /* supported*/
-  case  AT_DEFMODE:
-  {
-    /*Format = FORMAT_8_D_PARAM;*/
-    if(Marker == SET_MARKER)
-    {
-      value_8 =  *(uint8_t*)ptr;
-      len = AT_VPRINTF("%s%s%s%d%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,value_8,AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case AT_PS:
-  {
-    if(Marker == SET_MARKER)
-    {
-      /*value_8 =  *(uint8_t*)ptr;*/
-      len = AT_VPRINTF("%s%s%s%d,%d%s",AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
-                      ((sPowerCtrlSet_t *)ptr)->SetType,((sPowerCtrlSet_t *)ptr)->Value,AT_TAIL);
-    }
-    else
-    {
-      len = AT_VPRINTF("%s%s%s%s",AT_HEADER,CmdTab[Cmd],AT_GET_MARKER,AT_TAIL);
-    }
-    break;
-  }
-  case AT_RF:
-  {
-    if(Marker == SET_MARKER) {
-      len = AT_VPRINTF("%s%s%s%d,%d,%d,%d,%d,%d,%d,%d,%s",AT_HEADER,
-      CmdTab[Cmd],AT_SET_MARKER,((sRadioCtrlSet_t *)ptr)->power,
-      ((sRadioCtrlSet_t *)ptr)->frequency,((sRadioCtrlSet_t *)ptr)->sf,
-      ((sRadioCtrlSet_t *)ptr)->bw,((sRadioCtrlSet_t *)ptr)->codingRate,
-      ((sRadioCtrlSet_t *)ptr)->crc,((sRadioCtrlSet_t *)ptr)->preamble,
-      ((sRadioCtrlSet_t *)ptr)->invIQ,AT_TAIL);
-    }
-    else
-    {
-      len = 0;
-    }
-    break;
-  }
-  default:
-    len = AT_VPRINTF("%s%s%s",AT_HEADER,CmdTab[Cmd],AT_TAIL);
-    DBG_PRINTF ("format not yet supported \n\r");
-    break;
-} /*end switch(cmd)*/
-return len;
+      if(Marker == SET_MARKER) {
+        len = AT_VPRINTF("%s%s%s%02x%s%02x%s%02x%s%02x%s", AT_HEADER,
+                         CmdTab[Cmd], AT_SET_MARKER,
+                        (unsigned)((unsigned char *)(&value))[3], AT_SEPARATOR,
+                        (unsigned)((unsigned char *)(&value))[2], AT_SEPARATOR,
+                        (unsigned)((unsigned char *)(&value))[1], AT_SEPARATOR,
+                        (unsigned)((unsigned char *)(&value))[0], AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case AT_APPEUI:  /* Supported*/
+    case AT_DEUI:    /* USI equivalent EUI - not relevant for SET since burned unique IEEE EUI64 at factory. */
+      /*  Format = FORMAT_8_02X_PARAM;*/
+      PtrValue = (uint8_t*)ptr;
+      if(Marker == SET_MARKER) {
+      len = AT_VPRINTF(
+			  "%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
+              AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
+              PtrValue[0], AT_SEPARATOR, PtrValue[1], AT_SEPARATOR,
+              PtrValue[2], AT_SEPARATOR, PtrValue[3], AT_SEPARATOR,
+              PtrValue[4], AT_SEPARATOR, PtrValue[5], AT_SEPARATOR,
+              PtrValue[6], AT_SEPARATOR, PtrValue[7], AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case  AT_RX2FQ:    /* N/A */
+    case  AT_RX1DL:    /* Supported - USI equivalent RX1DT */
+    case  AT_RX2DL:    /* Supported - USI equivalent RX2DT */
+    case  AT_JN1DL:    /* Supported - USI equivalent JRX1DT */
+    case  AT_JN2DL:    /* Supported - USI equivalent JRX2DT */
+    case  AT_FCU:      /* Not supported */
+    case  AT_FCD:      /* Not supported */
+      /* Format = FORMAT_32_D_PARAM; */
+      if(Marker == SET_MARKER) {
+        value =  *(uint32_t*)ptr;
+        len = AT_VPRINTF("%s%s%s%u%s", AT_HEADER, CmdTab[Cmd], AT_SET_MARKER,
+                         value, AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case  AT_JOIN:     /* Supported */
+    case  AT_ATE:      /* Supported */
+    case  AT_DR:       /* Supported */
+    case  AT_RX2DR:    /* Supported */
+    case  AT_BAND:     /* Supported */
+    case  AT_TXP:      /* N/A */
+    case  AT_NJM:      /* N/A */
+    case  AT_PNM:      /* Supported - USI equivalent NTYP */
+    case  AT_DCS:      /* Supported - USI equivalent DC -
+                        * Disabling duty cycle for testing only.
+                        * It should be enabled for shipping
+                        */
+    case  AT_ADR:      /* Supported */
+    case  AT_CFM:      /* N/A */
+    case  AT_CFS:      /* N/A */
+    case  AT_BAT:      /* Supported */
+    case  AT_RSSI:     /* Not supported by USI FW version */
+    case  AT_SNR:      /* Not supported by USI FW version */
+    case  AT_NJS:      /* N/A */
+    case  AT_CLASS:    /* Not supported on V2.5 USI FW version */
+    case  AT_WDCT:     /* Supported */
+    case  AT_DEFMODE:
+    case  AT_VERB:     /* Supported since V2.8 USI FW version */
+      /* Format = FORMAT_8_D_PARAM;*/
+      if(Marker == SET_MARKER) {
+        value_8 =  *(uint8_t*)ptr;
+        len = AT_VPRINTF("%s%s%s%d%s", AT_HEADER, CmdTab[Cmd], AT_SET_MARKER,
+                         value_8, AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER,
+                         AT_TAIL);
+      }
+      break;
+    case AT_PS:
+      if(Marker == SET_MARKER) {
+        len = AT_VPRINTF("%s%s%s%d,%d%s", AT_HEADER, CmdTab[Cmd],
+                         AT_SET_MARKER, ((sPowerCtrlSet_t *)ptr)->SetType,
+                         ((sPowerCtrlSet_t *)ptr)->Value, AT_TAIL);
+      } else {
+        len = AT_VPRINTF("%s%s%s%s", AT_HEADER, CmdTab[Cmd], AT_GET_MARKER, AT_TAIL);
+      }
+      break;
+    case AT_RF:
+      if(Marker == SET_MARKER) {
+        len = AT_VPRINTF("%s%s%s%d,%d,%d,%d,%d,%d,%d,%d,%s", AT_HEADER,
+                         CmdTab[Cmd], AT_SET_MARKER,
+                         ((sRadioCtrlSet_t *)ptr)->power,
+                         ((sRadioCtrlSet_t *)ptr)->frequency,
+                         ((sRadioCtrlSet_t *)ptr)->sf,
+                         ((sRadioCtrlSet_t *)ptr)->bw,
+                         ((sRadioCtrlSet_t *)ptr)->codingRate,
+                         ((sRadioCtrlSet_t *)ptr)->crc,
+                         ((sRadioCtrlSet_t *)ptr)->preamble,
+                         ((sRadioCtrlSet_t *)ptr)->invIQ, AT_TAIL);
+      } else {
+        len = 0;
+      }
+      break;
+    default:
+      len = AT_VPRINTF("%s%s%s", AT_HEADER, CmdTab[Cmd], AT_TAIL);
+      DBG_PRINTF ("format not yet supported \n\r");
+      break;
+  } /* end switch(cmd)*/
+  return len;
 }
 
 
 /******************************************************************************
   * @brief This function sends an AT cmd to the slave device
   * @param len: length of the AT cmd to be sent
-  * @retval HAL return code
+  * @retval boolean
 ******************************************************************************/
-static HAL_StatusTypeDef at_cmd_send(uint16_t len)
+static bool at_cmd_send(uint16_t len)
 {
-HAL_StatusTypeDef RetCode;
+  bool RetCode;
   uint16_t size;
 
   DBG_PRINTF("cmd: %s\r\n", LoRa_AT_Cmd_Buff);
 
-  /*transmit the command from master to slave*/
+  /* Transmit the command from master to slave */
   size = HW_UART_Modem_Write((uint8_t*)LoRa_AT_Cmd_Buff, len);
   if(size == len ) {
-    RetCode = HAL_OK;
+    RetCode = true;
   } else {
-    RetCode = HAL_ERROR;
+    RetCode = false;
   }
-  return ( RetCode);
+  return RetCode;
 }
-
-
 
 /******************************************************************************
   * @brief This function receives response from the slave device
@@ -501,98 +421,86 @@ HAL_StatusTypeDef RetCode;
 ******************************************************************************/
 static ATEerror_t at_cmd_receive(void *pdata)
 {
-uint8_t  ResponseComplete = 0;
-int8_t i = 0;
-int8_t charnumber = 0;
-char *ptrChr;
-ATEerror_t RetCode;
-uint8_t NoReturnCode =1;   /*to discriminate the Get return code from return value*/
-uint32_t msStart;
+  uint8_t  ResponseComplete = 0;
+  int8_t i = 0;
+  int8_t charnumber = 0;
+  char *ptrChr;
+  ATEerror_t RetCode;
+  /* Discriminate the Get return code from return value */
+  uint8_t NoReturnCode = 1;
+  uint32_t msStart;
 
-  /*cleanup the response buffer*/
+  /* Cleanup the response buffer*/
   memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
-  while (!ResponseComplete)
-  {
+  while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
     }
 
-    /*process the response*/
+    /* Process the response*/
     response[i] = HW_UART_Modem_GetNewChar();
 
-    //Delete the first three characters '\r''#''space' to remove response analysing issue
-    if((response[0] == '\r') && (response[1] == '#') && (response[2] == ' ')) {
+    /*
+	 * Delete this first three characters:
+	 * "\r# "
+	 * to remove response analysing issue
+	 */
+    if((response[0] == '\r') && (response[1] == '#') &&
+       (response[2] == ' ')) {
       i = -1;
     }
 
-      /*wait up to carriage return OR the line feed marker*/
-       if (/*(response[i] =='\r') || */(response[i] == '\n'))
-       {
-        DBG_PRINTF("at_cmd_receive: %s\r\n", response);
-        if(pdata == NULL) /*return code following a SET cmd or simple AT cmd*/
-        {
-          //if (i>1)  /*return code following a SET cmd or simple AT cmd- we skip the first <cr><ln>*/
-          //{
+    /* Wait up to carriage return OR the line feed marker*/
+    if (/*(response[i] =='\r') || */(response[i] == '\n')) {
+      DBG_PRINTF("at_cmd_receive: %s\r\n", response);
+      if(pdata == NULL) {
+        /* Returned code following a SET cmd or simple AT cmd*/
+		i= 0;
+        ResponseComplete = 1;
+        RetCode = at_cmd_responseAnalysing(response);
+        break;
+      } else {
+        /* Returned value following a GET cmd */
+        if (i!= 0 && NoReturnCode) {
+          /* First statement to get back the return value */
+          response[i] = '\0';
+          if (gFlagException != AT_FWVERSION) { /* See comment in lora_driver.c */
+            ptrChr = strchr(&response[1],'=');  /* Skip the '\0''\r' */
+            strcpy(pdata,ptrChr+1);
+          } else {
+            strcpy(pdata,&response[1]);
+            gFlagException = AT_END_AT;
+          }
+          memset(response, 0x00, strlen(response));
+          i= -1; /* Compensate the next index iteration and restart in [0] */
+          NoReturnCode = 0; /*return code for the Get cmd*/
+        } else {
+          if (i>1) {
+            /*second statement to get back the return code*/
             i= 0;
-            ResponseComplete = 1;
+            ResponseComplete = 1;   /*when value '=' return code have been trapped*/
             RetCode = at_cmd_responseAnalysing(response);
-            break;
-          //}
-        }
-        else    /* returned value following a GET cmd */
-        {
-          if (i!= 0 && NoReturnCode)
-          {
-            /*first statement to get back the return value*/
-            response[i] = '\0';
-            if (gFlagException != AT_FWVERSION)         /*see comment in loara_driver.c*/
-            {
-              ptrChr = strchr(&response[1],'=');       /*to skip the '\0''\r'*/
-              strcpy(pdata,ptrChr+1);
-              gFlagException = AT_END_AT;
-            }
-            else
-            {
-              strcpy(pdata,&response[1]);
-            }
             memset(response, 0x00, 16);
-            i= -1;             /*to compensate the next index iteration and restart in [0]*/
-            NoReturnCode = 0;  /*return code for the Get cmd*/
-          }
-          else
-          {
-            if (i>1)
-            {
-              /*second statement to get back the return code*/
-              i= 0;
-              ResponseComplete = 1;   /*when value + return code have been trapped*/
-              RetCode = at_cmd_responseAnalysing(response);
-              memset(response, 0x00, 16);
-              break;
-            }
+            break;
           }
         }
-       }
-       else
-       {
-        if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) /* frame overflow */
-         {
-           i = 0;
-           return (AT_TEST_PARAM_OVERFLOW);
-         }
-       }
-        i++;
-      charnumber++;
+      }
+    } else {
+      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) {
+        /* Frame overflow */
+        i = 0;
+        return (AT_TEST_PARAM_OVERFLOW);
+      }
+    }
+    i++;
+    charnumber++;
   }
-      return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
+  return RetCode;
 }
-
-
-
 
 /******************************************************************************
   * @brief This function receives asynchronus event from the slave device
@@ -601,73 +509,64 @@ uint32_t msStart;
 ******************************************************************************/
 static ATEerror_t at_cmd_receive_async_event(void)
 {
-uint8_t  ResponseComplete = 0;
-int8_t i = 0;
-int8_t charnumber = 0;
-char *ptrChr;
-ATEerror_t RetCode;
-uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return value*/
-uint32_t msStart;
+  uint8_t  ResponseComplete = 0;
+  int8_t i = 0;
+  int8_t charnumber = 0;
+  char *ptrChr;
+  ATEerror_t RetCode;
+  /* Discriminate the Get return code from return value */
+  uint8_t NoReturnCode =1;
+  uint32_t msStart;
 
-  /*cleanup the response buffer*/
+  /* Cleanup the response buffer */
   memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
-  while (!ResponseComplete)
-  {
+  while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
     }
 
-    /*process the response*/
+    /* Process the response */
     response[i] = HW_UART_Modem_GetNewChar();
 
-    /*wait up to carriage return OR the line feed marker*/
-    if (/*(response[i] =='\r') || */(response[i] == '\n'))
-    {
+    /* Wait up to carriage return OR the line feed marker */
+    if (/*(response[i] =='\r') || */(response[i] == '\n')) {
       DBG_PRINTF("at_cmd_receive_async_event: %s\r\n", response);
 
-      if (i!= 0 && NoReturnCode)      /*trap the asynchronous event*/
-      {
-        /*first statement to get back the return value*/
+      if (i!= 0 && NoReturnCode) {  /* Trap the asynchronous event*/
+        /* First statement to get back the return value */
         response[i] = '\0';
-        ptrChr = strchr(&response[0],'+');       /*to skip the '\0''\r'*/
-        RetCode = at_cmd_AsyncEventAnalysing(ptrChr,NULL);
+        ptrChr = strchr(&response[0], '+'); /* Skip the '\0''\r' */
+        RetCode = at_cmd_AsyncEventAnalysing(ptrChr, NULL);
         memset(response, 0x00, 16);
-        i= -1;             /*to compensate the next index iteration and restart in [0]*/
-        NoReturnCode = 0;  /*return code for the Get cmd*/
+        i= -1; /* Compensate the next index iteration and restart in [0] */
+        NoReturnCode = 0;  /* Return code for the Get cmd*/
         break;
-      }
-      else
-      {
-        if (i>1)
-        {
-          /*second statement to get back the return code*/
+      } else {
+        if (i>1) {
+          /* Second statement to get back the return code */
           i= 0;
-          ResponseComplete = 1;   /*when value + return code have been trapped*/
+          ResponseComplete = 1; /* When value + return code have been trapped */
           RetCode = at_cmd_responseAnalysing(response);
           memset(response, 0x00, 16);
           break;
         }
       }
-    }
-    else
-    {
-      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) /* frame overflow */
-      {
+    } else {
+      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) {
+        /* Frame overflow */
         i = 0;
         return (AT_TEST_PARAM_OVERFLOW);
       }
     }
-      i++;
-      charnumber++;
+    i++;
+    charnumber++;
   }
-      return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
+  return RetCode;
 }
-
-
 
 /******************************************************************************
   * @brief This function receives asynchronus event from the slave device
@@ -676,69 +575,68 @@ uint32_t msStart;
 ******************************************************************************/
 static ATEerror_t at_cmd_receive_async_event_downlink_data(void *pdata)
 {
+  int8_t i = 0;
+  int8_t charnumber = 0;
+  char *ptrChr;
+  ATEerror_t RetCode;
+  /* Discriminate the Get return code from return value */
+  uint8_t NoReturnCode =1;
+  int8_t DlinkData_Complete = (0x1U);
+  uint32_t msStart;
 
-int8_t i = 0;
-int8_t charnumber = 0;
-char *ptrChr;
-ATEerror_t RetCode;
-uint8_t NoReturnCode =1;   /*too discriminate the Get reurn code from return value*/
-int8_t DlinkData_Complete = (0x1U);
-uint32_t msStart;
-
-  /*cleanup the response buffer*/
+  /* Cleanup the response buffer */
   memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
-  while ( !(DlinkData_Complete & (0x1u <<2)))   /*received sequence not complete*/
-  {
+  while (!(DlinkData_Complete & (0x1u <<2))) {  /* Received sequence not complete */
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > ASYNC_EVENT_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
     }
 
-    /*process the response*/
+	/* Process the response */
     response[i] = HW_UART_Modem_GetNewChar();
 
-      /*wait up to carriage return OR the line feed marker*/
-       if ((response[i] =='\r') || (response[i] == '\n'))
-       {
-          DBG_PRINTF("at_cmd_receive_async_event_downlink_data: %s\r\n", response);
+    /* Wait up to carriage return OR the line feed marker */
+    if ((response[i] =='\r') || (response[i] == '\n')) {
+      DBG_PRINTF("at_cmd_receive_async_event_downlink_data: %s\r\n", response);
 
-          if (i!= 0 && NoReturnCode)      /*trap the asynchronous events associated to network downlink data*/
-          {
-            /*sequence of events to be trapped: +RXPORT , +PAYLOADSIZE , +RCV*/
-            response[i] = '\0';
-            ptrChr = strchr(&response[0],'+');   /*Here when we go out from low power mode the prefix is*/
-                                                /* '\r' only. We do not skip the '\0''\r' - USI behavior ...*/
-            RetCode = at_cmd_AsyncEventAnalysing(ptrChr,&DlinkData_Complete);
-            if(RetCode == AT_OK)
-            {
-                ptrChr = strchr(&response[1],'=');       /*to skip the '\0''\r'*/
-                strcpy(pdata,ptrChr+1);
-                pdata = (char*)pdata + strlen(ptrChr+1);
-                *((char*)pdata) = ',';                  /* introduce separator in order to discriminate port, size and data*/
-                pdata = (char*)pdata + 1;
-            }
+      /* Trap the asynchronous events associated to network downlink data */
+      if (i!= 0 && NoReturnCode) {
+        /* Sequence of events to be trapped: +RXPORT , +PAYLOADSIZE , +RCV */
+        response[i] = '\0';
+        /*
+		 * Here when we go out from low power mode the prefix is '\r' only.
+         * We do not skip the '\0''\r' - USI behavior ...
+         */
+        ptrChr = strchr(&response[0], '+');
+        RetCode = at_cmd_AsyncEventAnalysing(ptrChr,&DlinkData_Complete);
+        if(RetCode == AT_OK) {
+          ptrChr = strchr(&response[1],'='); /* Skip the '\0''\r' */
+          strcpy(pdata,ptrChr+1);
+          pdata = (char*)pdata + strlen(ptrChr+1);
+          if(!(DlinkData_Complete & (0x1u <<2))) {
+            /* Introduce separator in order to discriminate port, size and data */
+            *((char*)pdata) = ',';
+            pdata = (char*)pdata + 1;
+          }
+        }
 
-            memset(response, 0x00, 16);
-            i= -1;             /*to compensate the next index iteration and restart in [0]*/
-//      NoReturnCode = 0;  /*return code for the Get cmd*/
-//                  break;
-          }
-       }
-       else
-       {
-          if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) /* frame overflow */
-          {
-            i = 0;
-            return (AT_TEST_PARAM_OVERFLOW);
-          }
-       }
-       i++;
-       charnumber++;
+        memset(response, 0x00, 16);
+        i= -1; /* Compensate the next index iteration and restart in [0 ] */
+      }
+    } else {
+      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) {
+        /* Frame overflow */
+        i = 0;
+        return (AT_TEST_PARAM_OVERFLOW);
+      }
+    }
+    i++;
+    charnumber++;
   }
-       return ( RetCode);                            /*version of HAL .. there was not Rx field state*/
+  return RetCode;
 }
 
 /******************************************************************************
@@ -748,24 +646,21 @@ uint32_t msStart;
 ******************************************************************************/
 static ATEerror_t at_cmd_responseAnalysing(const char *ReturnResp)
 {
-ATEerror_t status;
-int i;
+  ATEerror_t status;
+  int i;
+  status = AT_END_ERROR;
 
-    status = AT_END_ERROR;
-
-    for (i = 0; i < AT_END_ERROR; i++)
-    {
-      if (strncmp(ReturnResp, ATE_RetCode[i].RetCodeStr, (ATE_RetCode[i].SizeRetCodeStr-1)) == 0)
-      {
-        /* command has been found found*/
-        status = ATE_RetCode[i].RetCode;
-        return (status);
-      }
+  for (i = 0; i < AT_END_ERROR; i++) {
+    if (strncmp(ReturnResp,
+                ATE_RetCode[i].RetCodeStr,
+               (ATE_RetCode[i].SizeRetCodeStr-1)) == 0) {
+      /* Command has been found found */
+      status = ATE_RetCode[i].RetCode;
+      return status;
     }
-      return (status);
+  }
+ return status;
 }
-
-
 
 /******************************************************************************
   * @brief This function does analysis of the asynchronous event received by the device
@@ -774,78 +669,52 @@ int i;
 ******************************************************************************/
 static ATEerror_t at_cmd_AsyncEventAnalysing(const char *ReturnResp, int8_t *Flag)
 {
-ATEerror_t status;
+  ATEerror_t status;
+  status = AT_END_ERROR;
 
-    status = AT_END_ERROR;
-
-    if (strncmp(ReturnResp, "+JoinAccepted\r", sizeof("+JoinAccepted\r")-1) == 0)
-    {
-      /* event has been identified*/
-      status = AT_OK;
-      return (status);
-    }
-
-    /*following statements for network downlink data analysis*/
-    if (strncmp(ReturnResp, "+RXPORT", sizeof("+RXPORT")-1) == 0)
-    {
-      /* event has been identified*/
+  if (strncmp(ReturnResp, "+JoinAccepted\r", sizeof("+JoinAccepted\r")-1) == 0) {
+   /* Event has been identified*/
+   status = AT_OK;
+  } else {
+    /* Following statements for network downlink data analysis */
+    if (strncmp(ReturnResp, "+RXPORT", sizeof("+RXPORT")-1) == 0) {
+      /* Event has been identified */
       *Flag <<= (0x0U);
       status = AT_OK;
-      return (status);
+    } else {
+      /* Following statement for network downlink data */
+      if (strncmp(ReturnResp, "+PAYLOADSIZE", sizeof("+PAYLOADSIZE")-1) == 0) {
+        /* event has been identified */
+        *Flag <<= (0x1U);
+        status = AT_OK;
+      } else {
+        /* Following statement for network downlink data */
+        if (strncmp(ReturnResp, "+RCV", sizeof("+RCV")-1) == 0) {
+          /* Event has been identified */
+          if(*Flag == 0x1U) {
+            *Flag = (0x1U << 2);
+          } else {
+            *Flag <<= (0x1U);
+          }
+          status = AT_OK;
+        } else {
+          /* Following statement for network downlink data */
+          if (strncmp(ReturnResp, "+PS", sizeof("+PS")-1) == 0) {
+           /* Event has been identified */
+           status = AT_OK;
+          } else {
+            /* Following statement for network downlink data */
+            if (strncmp(ReturnResp, "+TX: Done", sizeof("+TX: Done")-1) == 0) {
+              /* Event has been identified */
+              status = AT_OK;
+            }
+          }
+        }
+      }
     }
-
-    /*following statement for network downlink data*/
-    if (strncmp(ReturnResp, "+PAYLOADSIZE", sizeof("+PAYLOADSIZE")-1) == 0)
-    {
-      /* event has been identified*/
-      *Flag <<= (0x1U);
-      status = AT_OK;
-      return (status);
-    }
-
-    /*following statement for network downlink data*/
-    if (strncmp(ReturnResp, "+RCV", sizeof("+RCV")-1) == 0)
-    {
-      /* event has been identified*/
-      *Flag <<= (0x1U);
-      status = AT_OK;
-      return (status);
-    }
-
-    /*following statement for network downlink data*/
-    if (strncmp(ReturnResp, "+PS", sizeof("+PS")-1) == 0)
-    {
-      /* event has been identified*/
-      status = AT_OK;
-      return (status);
-    }
-
-    /*following statement for network downlink data*/
-    if (strncmp(ReturnResp, "+TX: Done", sizeof("+TX: Done")-1) == 0)
-    {
-      /* event has been identified*/
-      status = AT_OK;
-      return (status);
-    }
-    return (status);
+  }
+  return status;
 }
-/******************************************************************************
-  * @brief This function sends an AT cmd to the slave device
-  * @brief It is an AT cmd without response from slave device
-  * @param len: length of the AT cmd to be sent
-  * @retval void
-******************************************************************************/
-//static void at_cmd_send_noresp(uint16_t len)
-//{
-//  /*transmit the command from master to slave*/
-//  if(HAL_UART_Transmit(&huart2, (uint8_t*)LoRa_AT_Cmd_Buff, len, 5000) != HAL_OK)
-//  {
-//   while (1);
-//  }
-//}
-
-
-
 
 /******************************************************************************
   * @brief format the AT frame to be sent to the modem (slave)
@@ -854,12 +723,13 @@ ATEerror_t status;
 ******************************************************************************/
 uint16_t at_cmd_vprintf(const char *format, ...)
 {
-va_list args;
-uint16_t len;
+  va_list args;
+  uint16_t len;
 
   va_start(args, format);
 
-  len = tiny_vsnprintf_like(LoRa_AT_Cmd_Buff+Offset, sizeof(LoRa_AT_Cmd_Buff)-Offset, format, args);
+  len = tiny_vsnprintf_like(LoRa_AT_Cmd_Buff+Offset,
+                            sizeof(LoRa_AT_Cmd_Buff)-Offset, format, args);
 
   va_end(args);
 

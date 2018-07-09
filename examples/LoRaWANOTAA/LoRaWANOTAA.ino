@@ -23,12 +23,14 @@
 
 #define FRAME_DELAY 300000  // in ms. Every 5 minutes by default.
 
-// Serial port use to communicate with the USI shield. Specific to the board Discovery L475 IoT.
-HardwareSerial SerialLora(PA_1, PA_0);
+// Serial port use to communicate with the USI shield.
+// By default, use D0 (Rx) and D1(Tx).
+// For Nucleo64, see "Known limitations" chapter in the README.md
+HardwareSerial SerialLora(D0, D1);
 
 // AppKey and AppEUI.
 const char appKey[] = "0123456789abcdef0123456789abcdef";
-const char appEUI[] = "abcdef0123456789abcdef0123456789";
+const char appEUI[] = "0101010101010101";
 
 // Data send
 char frameTx[] = "Hello world!";

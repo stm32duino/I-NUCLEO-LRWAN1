@@ -1,8 +1,6 @@
 /*******************************************************************************
-  * @file    atcmd_modem.h
+  * @file    atcmd_modem.h based on V1.0.1
   * @author  MCD Application Team
-  * @version V1.0.1
-  * @date    01-June-2017
   * @brief   Header for AT commands definition
   ******************************************************************************
   * @attention
@@ -40,16 +38,11 @@
  extern "C" {
 #endif
 
-
-
       /**********************************************************************/
       /*    AT commands specification for WM_SG_SM_42USI modem              */
       /*               - set of commands                    */
       /*               - return code error                                  */
       /**********************************************************************/
-
-
-//#ifdef WM_SG_SM_42   /*USI modem*/
 
 #ifdef AT_CMD_INDEX
 /*
@@ -58,45 +51,45 @@
  */
 typedef enum ATCmd
 {
- AT,                 /* OK*/
+ AT,                 /* OK */
 
- AT_FWVERSION,       /* new one*/
+ AT_FWVERSION,       /* New one */
 
- AT_RESET,           /* OK*/
+ AT_RESET,           /* OK */
 
- AT_BAND,            /* new one*/
+ AT_BAND,            /* New one */
 
- AT_JOIN,            /* same than Murata with additional parameter ABP or OTAA -> OK*/
+ AT_JOIN,            /* OK - Same than Murata with additional parameter ABP or OTAA */
 
- AT_NJS,             /*KO - there is not equivalent in USI*/
+ AT_NJS,             /* KO - there is not equivalent in USI */
 
- AT_DEUI,            /*OK - USI equivalent EUI*/
+ AT_DEUI,            /* OK - USI equivalent EUI */
 
- AT_DADDR,           /*OK*/
+ AT_DADDR,           /* OK */
 
- AT_APPKEY,          /*OK - USI equivalent AK*/
+ AT_APPKEY,          /* OK - USI equivalent AK */
 
- AT_NWKSKEY,         /*OK - USI equivalent NSK*/
+ AT_NWKSKEY,         /* OK - USI equivalent NSK */
 
- AT_APPSKEY,       /*OK - USI equivalent ASK*/
+ AT_APPSKEY,         /* OK - USI equivalent ASK */
 
- AT_APPEUI,          /*OK*/
+ AT_APPEUI,          /* OK */
 
- AT_ADR,             /*OK*/
+ AT_ADR,             /* OK */
 
- AT_TXP,             /*OK*/
+ AT_TXP,             /* OK */
 
- AT_DR,              /*OK*/
+ AT_DR,              /* OK */
 
- AT_DCS,             /*OK - USI equivalent DC*/
+ AT_DCS,             /* OK - USI equivalent DC */
 
- AT_PNM,             /*OK - USI equivalent NTYP*/
+ AT_PNM,             /* OK - USI equivalent NTYP */
 
- AT_RX2FQ,       /*???????  */
+ AT_RX2FQ,           /* ?? */
 
- AT_RX2DR,       /*OK*/
+ AT_RX2DR,           /* OK */
 
- AT_RX1DL,           /*OK - USI equivalent RX1DT*/
+ AT_RX1DL,           /*OK - USI equivalent RX1DT */
 
  AT_RX2DL,           /*OK - USI equivalent RX2DT*/
 
@@ -104,139 +97,140 @@ typedef enum ATCmd
 
  AT_JN2DL,           /*OK - USI equivalent JRX2DT*/
 
- AT_NJM,             /* is replaced by the combo join ?????? */
+ AT_NJM,             /* Is replaced by the combo join ? */
 
- AT_NWKID,           /*??????????*/
- AT_FCU,             /*?????????*/
- AT_FCD,             /*????????????*/
+ AT_NWKID,           /* ?? */
+ AT_FCU,             /* ?? */
+ AT_FCD,             /* ?? */
 
- AT_CLASS,            /*OK*/
+ AT_CLASS,           /* OK */
 
 /* AT_SENDB,*/
- AT_SEND,             /*just one send mode- binary with scalar format port,data,ack*/
+ AT_SEND,            /* Just one send mode- binary with scalar format port,data,ack */
 
- AT_TXT,              /*new one -- to send text. look like AT_SEND for murata*/
+ AT_TXT,             /* New one -- to send text. look like AT_SEND for murata */
 
- AT_RECVB,            /* ??????????*/
- AT_RECV,     /*  ????????????*/
- AT_CFM,              /* include in the send command*/
- AT_CFS,              /*??????????????*/
+ AT_RECVB,           /* ?? */
+ AT_RECV,            /* ?? */
+ AT_CFM,             /* Include in the send command */
+ AT_CFS,             /* ?? */
 
- AT_BAT,                /*OK*/
+ AT_BAT,             /* OK */
 
- AT_RSSI,              /* OK*/
+ AT_RSSI,            /* OK */
 
- AT_SNR,        /* OK*/
+ AT_SNR,             /* OK */
 
- AT_VER,               /*OK*/
+ AT_VER,             /* OK */
 
- AT_WDCT,             /* new one*/
+ AT_WDCT,            /* New one */
 
- AT_DEFMODE,          /* new one*/
+ AT_DEFMODE,         /* New one */
 
- AT_WDG,              /* new one*/
+ AT_WDG,             /* New one */
 
- AT_ATE,              /*new one*/
+ AT_ATE,             /* New one */
 
- AT_SLEEP,            /*new one*/
+ AT_SLEEP,           /* New one */
 
- AT_PS,               /*new one*/
+ AT_PS,              /* New one */
 
- AT_RF,               /*new one*/
+ AT_RF,              /* New one */
+
+ AT_VERB,            /* New since firmware 2.8 */
 
  AT_END_AT
 } ATCmd_t;
 
 #endif
 
-
-
 #ifdef AT_CMD_STRING
-/*list of AT string cmd supported by the USI LoRa modem*/
+/* List of AT string cmd supported by the USI LoRa modem */
 static char *CmdTab[] = {
   "",
-  "I",           /* firmware version of USI loara module*/
-  "Z",
-  "+BAND",       /* +BAND country band - default 868 band*/
+  "I",           /* Firmware version of USI loara module */
+  "Z",           /* System Reset */
+  "+BAND",       /* +BAND country band - default 868 band */
 
-  "+JOIN",       /* +JOIN*/
+  "+JOIN",       /* +JOIN */
 
-  "+NJS",        /* +NJS --> ????*/
+  "+NJS",        /* +NJS --> ?? */
 
-  "+EUI",       /* +EUI device ID*/
+  "+EUI",        /* +EUI device ID */
 
-  "+ADDR",      /* +ADDR device Address*/
+  "+ADDR",       /* +ADDR device Address */
 
-  "+AK",         /* +AK application key*/
+  "+AK",         /* +AK application key */
 
-  "+NSK",        /* +NSK Network session Key*/
+  "+NSK",        /* +NSK Network session Key */
 
-  "+ASK",        /* +ASK application Session key*/
+  "+ASK",        /* +ASK application Session key */
 
-  "+APPEUI",     /* +APPEUI application Identifier*/
+  "+APPEUI",     /* +APPEUI application Identifier */
 
-  "+ADR",        /* +ADR adaptive data rate*/
+  "+ADR",        /* +ADR adaptive data rate */
 
-  "+TXP",        /* +TXP transmit Tx power*/
+  "+TXP",        /* +TXP transmit Tx power */
 
-  "+DR",         /* +DR data rate*/
+  "+DR",         /* +DR data rate */
 
-  "+DC",       /* +DC duty cycle settings*/
+  "+DC",         /* +DC duty cycle settings */
 
-  "+NTYP",        /* +NTYP (replace+PNM) public network*/
+  "+NTYP",       /* +NTYP (replace+PNM) public network */
 
-  "+RX2FQ",      /* +RF2FQ Rx2 window frequency -->   ??????*/
+  "+RX2FQ",      /* +RF2FQ Rx2 window frequency --> ?? */
 
-  "+RX2DR",      /* +RX2DR data rate of Rx window*/
+  "+RX2DR",      /* +RX2DR data rate of Rx window */
 
-  "+RX1DT",      /* +RX1DT Delay of the Rx1 window*/
+  "+RX1DT",      /* +RX1DT Delay of the Rx1 window */
 
-  "+RX2DT",      /* +RX2DT delay of the Rx2 window*/
+  "+RX2DT",      /* +RX2DT delay of the Rx2 window */
 
-  "+JRX1DT",      /* +JRX1DT Join delay on Rx Wind 1*/
+  "+JRX1DT",     /* +JRX1DT Join delay on Rx Wind 1 */
 
-  "+JRX2DT",      /* +JRX2DT Join delay on Rx Wind 2*/
+  "+JRX2DT",     /* +JRX2DT Join delay on Rx Wind 2 */
 
-  "+NJM",        /* +NJM Nwk Join Mode*/
+  "+NJM",        /* +NJM Nwk Join Mode */
   "+NWKID",      /* +NWKID Network ID */
   "+FCU",        /* +FCU uplink frame counter */
   "+FCD",        /* +FCD downlink frame counter */
 
-  "+CLASS",      /* +CLASS LoRa class*/
+  "+CLASS",      /* +CLASS LoRa class */
 
-/*  {"+SENDB"}, */     /* +SENDB send data binary format*/   /* sendB replaced by Send*/
-  "+SEND",       /* +SEND send data in raw format*/    /* no sendb anymore with USI*/
+/*{"+SENDB"},*/  /* +SENDB send data binary format --> sendB replaced by Send */
+  "+SEND",       /* +SEND send data in raw format --> no sendb anymore with USI */
 
-  "+TXT",       /* +TXT  transmit text packet*/
+  "+TXT",        /* +TXT  transmit text packet */
 
-  "+RECVB",      /* +RECVB received data in binary format*/
-  "+RECV",       /* +RECV received data in raw format*/
-  "+CFM",        /* +CFM  confirmation mode*/
-  "+CFS",        /* +CFS  confirm status*/
+  "+RECVB",      /* +RECVB received data in binary format */
+  "+RECV",       /* +RECV received data in raw format */
+  "+CFM",        /* +CFM  confirmation mode */
+  "+CFS",        /* +CFS  confirm status */
 
-  "+BAT",        /* +BAT  battery level*/
+  "+BAT",        /* +BAT  battery level */
 
-  "+RSSI",       /* +RSSI Signal strength indicator on received radio signal*/
+  "+RSSI",       /* +RSSI Signal strength indicator on received radio signal */
 
-  "+SNR",        /* +SNR  Signal to Noice ratio*/
+  "+SNR",        /* +SNR  Signal to Noice ratio */
 
-  "+VER",         /* LoRaWAN version */
+  "+VER",        /* LoRaWAN version, if fw >= 2.8 also contains fw version */
 
-  "+WDCT",        /* for update the configuration table*/
+  "+WDCT",       /* Update the configuration table */
 
-  "+DEFMODE",     /* fro set the default operationmode - 6 = LoRA WAN mode*/
+  "+DEFMODE",    /* Set the default operationmode - 6 = LoRA WAN mode */
 
-  "+WDG",         /* for enabling/disabling the watchdog*/
+  "+WDG",        /* Enabling/disabling the watchdog */
 
-  "E",            /* for enabling/disabling echo mode*/
+  "E",           /* Enabling/disabling local echo mode */
 
-  "+SLEEP",       /* for enter immediatly in sleep mode (slave) following the power control setting*/
+  "+SLEEP",      /* Enter immediatly in sleep mode (slave) following the power control setting */
 
-  "+PS",          /* for reead or set the MCU power control (Slave)*/
+  "+PS",         /* Read or set the MCU power control (Slave) */
 
-  "+RF"           /* to change the radio-related settings */ 
+  "+RF",         /* Change the radio-related settings */
+
+  "+VERB"        /* for enabling/disabling verbose response fw >= 2.8 */
 };
-
 #endif
 
 #ifdef AT_ERROR_INDEX
@@ -269,15 +263,16 @@ typedef enum eATEerror
   AT_ERROR_WAN_SETPARAM,          /* = -102,*/
   AT_WAN_NON_JOINED,              /* = -103,*/
   AT_END_ERROR,
-  AT_UART_LINK_ERROR,    /*additional return code to notify error on UART link*/
-  AT_TEST_PARAM_OVERFLOW, /* additonal return code to be compatible whatevery the device modem*/
-  AT_JOIN_SLEEP_TRANSITION, /*additional return code to manage the Join request transaction*/
+  /* Additional return code */
+  AT_UART_LINK_ERROR,       /* To notify error on UART link */
+  AT_TEST_PARAM_OVERFLOW,   /* To be compatible whatevery the device modem*/
+  AT_JOIN_SLEEP_TRANSITION, /* To manage the Join request transaction*/
 } ATEerror_t;
 
 #endif
 
 #ifdef AT_ERROR_STRING
-/*RetCode used to compare the return code from modem*/
+/* RetCode used to compare the return code from modem */
 static ATE_RetCode_t ATE_RetCode[] = {
   {"OK\r\n",                      sizeof("OK\r\n"),                       AT_OK},
   {"ERROR_UNKNOW\r",              sizeof("ERROR_UNKNOW\r"),               AT_ERROR_UNKNOW},
@@ -305,9 +300,8 @@ static ATE_RetCode_t ATE_RetCode[] = {
 };
 #endif
 
-
 #ifdef AT_CMD_MARKER
-/* Marker to design the AT command string*/
+/* Marker to design the AT command string */
 #define AT_HEADER       "AT"
 #define AT_SET_MARKER   "="
 #define AT_GET_MARKER   ""
@@ -320,9 +314,6 @@ static ATE_RetCode_t ATE_RetCode[] = {
 #define AT_FRAME_KEY_OFFSET  2
 
 #endif
-
-//#endif /*endif WM_SG_SM_42*/
-
 
 #ifdef __cplusplus
 }

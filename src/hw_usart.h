@@ -68,10 +68,10 @@
 /* Exported macros -----------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 
-HAL_StatusTypeDef HW_UART_Modem_Init(void *serial, uint32_t BaudRate);
+bool HW_UART_Modem_Init(void *serial, uint32_t BaudRate);
 void HW_UART_Modem_DeInit(void);
 
-FlagStatus HW_UART_Modem_IsNewCharReceived(void);
+bool HW_UART_Modem_IsNewCharReceived(void);
 
 uint8_t HW_UART_Modem_GetNewChar(void);
 
@@ -83,14 +83,6 @@ void HW_UART_Modem_Flush(void);
 #ifdef __cplusplus
 }
 #endif
-#endif /*__ usart_H */
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
+#endif /* __usart_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

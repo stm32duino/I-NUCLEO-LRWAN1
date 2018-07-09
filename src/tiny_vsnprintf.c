@@ -90,7 +90,6 @@ This code is based on a file that contains the following:
 
 #define TINY_PRINTF
 
-#include <stdarg.h>
 #include <string.h>
 #include "tiny_vsnprintf.h"
 

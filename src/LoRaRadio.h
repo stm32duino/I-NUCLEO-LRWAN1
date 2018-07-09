@@ -90,7 +90,8 @@ public:
 
   LoraRadio();
 
-  bool begin(HardwareSerial *serialx);  //begin initialization function
+  // Begin initialization function
+  bool begin(HardwareSerial *serialx);
   void end(void);
 
   bool setFrequency(uint32_t freq);

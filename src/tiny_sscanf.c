@@ -198,7 +198,7 @@ static u_char *__sccl(char *, u_char *);
  * vfscanf
  */
 static inline int
-VFSCANF(const char *str, const char *fmt0, __va_list ap)
+VFSCANF(const char *str, const char *fmt0, va_list ap)
 {
   u_char *fmt = (u_char *)fmt0;
   int c;    /* character from format, or conversion */

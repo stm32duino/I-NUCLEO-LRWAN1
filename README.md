@@ -26,15 +26,38 @@ as a simple LoRa® radio module.
 
 * The module supports only class A.
 * Sleep mode is not supported in OTAA mode with the version 2.6 of the firmware.
-* The same USART is shared between I-NUCLEO-LRWAN1 LoRa® expansion board and
-Nucleo-64 boards. See UM1724, §6.8 section to solve the issue.
+* Important note for Nucleo64:
+
+  By default, D0/D1 of CN9 board connector are respectively not connected to
+  PA3 and PA2 (SB62 and SB63 opened).
+  Those pins are connected to STLink USART thanks to SB13, SB14.
+
+  To use the shield:
+    - Connect shield D0(Tx) to PC11(Rx)
+    - Connect shield D1(Rx) to PC10(Tx)
+
+  or
+
+    - Close SB62 and SB63 to connect D0/D1 of CN9 connector to PA3 and PA2
+    - Open SB13 and SB14 to disconnect PA3 and PA2 from STLink UART
+
+  but in this case, you will have to wire STLink Rx/Tx of CN3 connector to
+  another pins and update Serial instance before call `Serial.begin(115200);`
+  using:
+  ```
+  Serial.setRx(Rx pin);
+  Serial.setTx(Tx pin);
+  ```
+  
+  See [UM1724](https://www.st.com/resource/en/user_manual/dm00105823.pdf), §6.8 section for more information.
 
 ## Examples
 
-* **getDevEUI**: display the unique device EUI.
+* **getInfo**: display several info about LoRa shield (Firmware version, device EUI,...)
 * **LoRaWANABP**: send/receive data in ABP mode.
 * **LoRaWANOTAA**: send/receive data in OTAA mode.
-* **LoRaPingPong**: P2P exchange in LoRa®
+* **LoRaPingPong**: P2P exchange in LoRa®.
+* **BridgeSerial**: Send/Receive AT command from/to PC terminal to/from shield (console mode).
 
 ## Advice
 
@@ -51,7 +74,7 @@ to increase the delay time of the RX1 window.
 ## Version
 
 This library is based on the STM32CubeExpansion_LRWAN_V1.1.2 driver.
-This library has been validated with the version 2.6 of the firmware.
+This library has been validated with the version 2.6 and 3.6 of the firmware.
 
 ## Documentation
 

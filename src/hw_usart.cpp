@@ -56,14 +56,14 @@ static HardwareSerial *Serialx = NULL;
 
 /* USART init function */
 
-HAL_StatusTypeDef HW_UART_Modem_Init(void *serial, uint32_t BaudRate)
+bool HW_UART_Modem_Init(void *serial, uint32_t BaudRate)
 {
   if(serial != NULL) {
     Serialx = (HardwareSerial*)serial;
     Serialx->begin(BaudRate);
-    return (HAL_OK);
+    return (true);
   }
-  return (HAL_ERROR);
+  return (false);
 }
 
 /* USART deinit function */
@@ -80,20 +80,20 @@ void HW_UART_Modem_DeInit(void)
 /******************************************************************************
   * @brief To check if data has been received
   * @param none
-  * @retval Reset no data / set data
+  * @retval boolean: false no data / true data
 ******************************************************************************/
-FlagStatus HW_UART_Modem_IsNewCharReceived(void)
+bool HW_UART_Modem_IsNewCharReceived(void)
 {
-  FlagStatus status;
+  bool status;
 
   if(Serialx != NULL) {
     if(Serialx->available()) {
-      status = SET;
+      status = true;
     } else {
-      status = RESET;
+      status = false;
     }
   } else {
-    status = RESET;
+    status = false;
   }
   return status;
 }
@@ -140,14 +140,6 @@ void HW_UART_Modem_Flush(void)
     }
   }
 }
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
 
 #ifdef __cplusplus
  }

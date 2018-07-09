@@ -11,8 +11,10 @@
 
 #define SEND_PERIOD_MS 1000 //send period every second.
 
-// Serial port use to communicate with the USI shield. Specific to the board Discovery L475 IoT.
-HardwareSerial SerialLora(PA_1, PA_0);
+// Serial port use to communicate with the USI shield.
+// By default, use D0 (Rx) and D1(Tx).
+// For Nucleo64, see "Known limitations" chapter in the README.md
+HardwareSerial SerialLora(D0, D1);
 
 // Messages to exchange
 uint8_t PingMsg[] = "PING";

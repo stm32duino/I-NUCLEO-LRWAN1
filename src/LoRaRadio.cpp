@@ -71,6 +71,7 @@ LoraRadio::LoraRadio()
 bool LoraRadio::begin(HardwareSerial *serialx)
 {
   uint8_t nbTry = 0;
+  uint8_t enable = 0;
 
   if(serialx == NULL) {
     return false;
@@ -83,8 +84,14 @@ bool LoraRadio::begin(HardwareSerial *serialx)
 
   LoRa_DumyRequest();
 
-  //Echo mode must be disabled
-  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, 0);
+  // Local echo mode must be disabled
+  Modem_AT_Cmd(AT_EXCEPT, AT_ATE, &enable);
+
+  // Verbose response must be enabled for the AT parser
+  enable = 1;
+  if (Modem_AT_Cmd(AT_EXCEPT, AT_VERB, &enable) != AT_OK) {
+    AT_VERB_cmd = false;
+  }
 
   // Enable Lora module
   /*
@@ -410,47 +417,47 @@ uint8_t LoraRadio::parseRcvData(void *pdata)
     return AT_END_ERROR;
   }
 
-  /*cleanup the response buffer*/
+  // Cleanup the response buffer
   memset(response, 0x00, DATA_RX_MAX_BUFF_SIZE);
 
-  while (!ResponseComplete)
-  {
+  while (!ResponseComplete) {
     msStart = millis();
-    while (HW_UART_Modem_IsNewCharReceived() == RESET) {
+    while (!HW_UART_Modem_IsNewCharReceived()) {
       if((millis() - msStart) > RESPONSE_TIMEOUT) {
         return AT_UART_LINK_ERROR;
       }
     }
 
-    /*process the response*/
+    // Process the response
     response[i] = HW_UART_Modem_GetNewChar();
 
-    /*wait up to carriage return OR the line feed marker*/
-    if (/*(response[i] =='\r') || */(response[i] == '\n'))
-    {
+    // Wait up to carriage return OR the line feed marker
+    if (/*(response[i] =='\r') || */(response[i] == '\n')) {
       DBG_PRINTF("LoRa radio rcv: %s\r\n", response);
 
-      if (i!= 0)      /*trap the asynchronous event*/
-      {
-        /*first statement to get back the return value*/
+      if (i!= 0) {  // Trap the asynchronous event
+        // First statement to get back the return value
         response[i] = '\0';
-        ptrChr = strchr(&response[0],'+');       /*to skip the '\0''\r'*/
-        if (strncmp(ptrChr, "+RCV:", sizeof("+RCV:")-1) == 0) {
+        ptrChr = strchr(&response[0],'+'); // Skip the '\0''\r'
+        if (strncmp(ptrChr, "+RCV", sizeof("+RCV")-1) == 0) {
           RetCode = AT_OK;
-          ptrChr = strchr(&response[1],':');       /*to skip the '\0''\r'*/
-          strcpy((char *)pdata,ptrChr+2);
+          if(AT_VERB_cmd) {
+            ptrChr = strrchr(&response[1], ',');
+            strcpy((char *)pdata, ptrChr+1);
+          } else {
+            ptrChr = strchr(&response[1],':');
+            strcpy((char *)pdata, ptrChr+2);
+		  }
           ResponseComplete = 1;
         } else {
           RetCode = AT_END_ERROR;
         }
         memset(response, 0x00, 16);
-        i= -1;             /*to compensate the next index iteration and restart in [0]*/
+        i= -1; // Compensate the next index iteration and restart in [0]
       }
-    }
-    else
-    {
-      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) /* frame overflow */
-      {
+    } else {
+      if (i ==  (DATA_RX_MAX_BUFF_SIZE-1)) {
+        //  Frame overflow
         i = 0;
         return (AT_TEST_PARAM_OVERFLOW);
       }
@@ -458,7 +465,7 @@ uint8_t LoraRadio::parseRcvData(void *pdata)
     i++;
   }
 
-  return ( RetCode);   /*version of HAL .. there was not Rx field state*/
+  return RetCode;
 }
 
 LoraRadio loraRadio;
