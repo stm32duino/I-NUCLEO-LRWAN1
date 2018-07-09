@@ -256,9 +256,9 @@ static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
     case AT_APPKEY:  /* Supported - USI equivalent AK */
     case AT_NWKSKEY: /* Supported - USI equivalent NSK */
     case AT_APPSKEY: /* Supported - USI equivalent ASK */
-      /* Format = FORMAT_16_02X_PARAM; */
-      PtrValue = (uint8_t*) ptr;
       if(Marker == SET_MARKER) {
+        /* Format = FORMAT_16_02X_PARAM; */
+        PtrValue = (uint8_t*) ptr;
         len = AT_VPRINTF(
   "%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
                       AT_HEADER, CmdTab[Cmd], AT_SET_MARKER,
@@ -277,9 +277,9 @@ static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
       break;
     case AT_DADDR:   /* Supported */
     case AT_NWKID:   /* N/A */
-      /*Format = FORMAT_32_02X_PARAM;*/
-      value =  *(uint32_t*)ptr;
       if(Marker == SET_MARKER) {
+        /*Format = FORMAT_32_02X_PARAM;*/
+        value =  *(uint32_t*)ptr;
         len = AT_VPRINTF("%s%s%s%02x%s%02x%s%02x%s%02x%s", AT_HEADER,
                          CmdTab[Cmd], AT_SET_MARKER,
                         (unsigned)((unsigned char *)(&value))[3], AT_SEPARATOR,
@@ -293,10 +293,10 @@ static uint8_t at_cmd_format(ATCmd_t Cmd, void *ptr, Marker_t Marker)
       break;
     case AT_APPEUI:  /* Supported*/
     case AT_DEUI:    /* USI equivalent EUI - not relevant for SET since burned unique IEEE EUI64 at factory. */
-      /*  Format = FORMAT_8_02X_PARAM;*/
-      PtrValue = (uint8_t*)ptr;
       if(Marker == SET_MARKER) {
-      len = AT_VPRINTF(
+        /*  Format = FORMAT_8_02X_PARAM;*/
+        PtrValue = (uint8_t*)ptr;
+        len = AT_VPRINTF(
 			  "%s%s%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s%02x%s",
               AT_HEADER,CmdTab[Cmd],AT_SET_MARKER,
               PtrValue[0], AT_SEPARATOR, PtrValue[1], AT_SEPARATOR,
