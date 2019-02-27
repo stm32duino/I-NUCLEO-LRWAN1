@@ -10,8 +10,11 @@
   Those pins are connected to STLink USART thanks to SB13, SB14.
 
   To use the shield:
-    - Connect shield D0(Tx) to PC11(Rx)
-    - Connect shield D1(Rx) to PC10(Tx)
+    - Connect shield D0(Tx) to a free U(S)ARTn Rx pin
+    - Connect shield D1(Rx) to a free U(S)ARTn Tx pin
+  Where 'n' are the same U(S)ART number
+    - Update the below 'SerialLora' instance definition using the chosen Rx/Tx
+
   or
     - Close SB62 and SB63 to connect D0/D1 of CN9 connector to PA3 and PA2
     - Open SB13 and SB14 to disconnect PA3 and PA2 from STLink UART

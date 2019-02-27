@@ -33,8 +33,12 @@ as a simple LoRa® radio module.
   Those pins are connected to STLink USART thanks to SB13, SB14.
 
   To use the shield:
-    - Connect shield D0(Tx) to PC11(Rx)
-    - Connect shield D1(Rx) to PC10(Tx)
+    - Connect shield D0(Tx) to a free U(S)ARTn Rx pin
+    - Connect shield D1(Rx) to a free U(S)ARTn Tx pin
+
+  Where 'n' are the same U(S)ART number.
+
+    - Update the Serial instance definition used for LoRa using the chosen Rx/Tx
 
   or
 
