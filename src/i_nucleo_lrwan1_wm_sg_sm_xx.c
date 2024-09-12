@@ -578,7 +578,7 @@ static ATEerror_t at_cmd_receive_async_event_downlink_data(void *pdata)
   int8_t i = 0;
   int8_t charnumber = 0;
   char *ptrChr;
-  ATEerror_t RetCode;
+  ATEerror_t RetCode = AT_OK;
   /* Discriminate the Get return code from return value */
   uint8_t NoReturnCode =1;
   int8_t DlinkData_Complete = (0x1U);

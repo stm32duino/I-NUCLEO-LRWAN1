@@ -681,6 +681,7 @@ repeat:
 
       case 'X':
         flags |= UPPERCASE;
+        __attribute__ ((fallthrough));
 
       case 'x':
         base = 16;
