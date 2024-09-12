@@ -301,11 +301,11 @@ uint8_t LoraRadio::write(uint8_t *buffer, uint8_t len)
 uint8_t LoraRadio::read(uint8_t *buffer)
 {
   uint8_t len = 0;
-  uint8_t frame[128];
+  uint8_t frame[128] = {0};
 
   if(buffer != NULL) {
     if(parseRcvData(frame) == AT_OK) {
-      keyCharToInt((char *)frame, buffer, sizeof((char *)frame));
+      keyCharToInt((char *)frame, buffer, strlen((char*)frame));
       len = sizeof((char *)buffer);
     }
   }
