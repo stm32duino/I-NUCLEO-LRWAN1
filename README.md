@@ -86,7 +86,7 @@ You can find the source files at
 https://github.com/stm32duino/I-NUCLEO-LRWAN1
 
 The I-NUCLEO-LRWAN1 module datasheet is available at  
-https://github.com/USILoRaModule/USI_I-NUCLEO-LRWAN1
+https://github.com/USIWPModule/USI_I-NUCLEO-LRWAN1
 
 LoRaWAN standard  
 https://www.lora-alliance.org
