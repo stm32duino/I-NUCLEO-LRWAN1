@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> I-NUCLEO-LRWAN1 LoRa® expansion board is obsolete as a consequence
+> this repository has been archived because no further developments are planned.
+> As an alternative, consider using STM32WLxx series supported by the Arduino_Core_STM32.
+
 # I-NUCLEO-LRWAN1
 
 Arduino library to support I-NUCLEO-LRWAN1 LoRa® expansion board based on USI®
